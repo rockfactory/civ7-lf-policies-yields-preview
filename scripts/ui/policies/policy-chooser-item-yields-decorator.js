@@ -56,6 +56,9 @@ function injectYieldsIntoCard(card) {
         const result = previewPolicyYields({ TraditionType: traditionType });
         const previewBox = renderYieldsPreviewBox(result);
         if (previewBox) {
+            // Nudge up via negative margin-top: the box overlaps the previous sibling by 4px,
+            // pulling the box visually higher while keeping the card height roughly unchanged.
+            previewBox.style.marginTop = '-4px';
             card.appendChild(previewBox);
         }
         card.dataset.lfYieldsInjected = '1';
