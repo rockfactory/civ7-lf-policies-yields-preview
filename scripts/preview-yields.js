@@ -56,7 +56,7 @@ export function previewModifiersYields(modifiers, description) {
             isValid: Object.keys(resolvedYields).length > 0 
         };
     }
-    catch (error) {
+    catch (/** @type {any} */ error) {
         console.error("Error in Yields preview:", description);
         console.error(error);
         console.error(error.stack);
