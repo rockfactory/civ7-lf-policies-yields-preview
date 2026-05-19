@@ -1,12 +1,17 @@
 import { PolicyYieldsCache } from "../../cache.js";
 
-class ScreenPoliciesYieldsDecorator {
-    static latestAppliedProto = null;
+// In 1.4.0 the legacy `screen-policies` custom element is still registered as a bridge by
+// `defineLegacyComponent("screen-policies", ...)` (see `policies/government-hub.js`), so this
+// `Controls.decorate` hook still fires when the screen mounts. The Solid component behind it
+// (`GovermentScreenComponent` / `PoliciesAndTraditions`) builds its data via `PoliciesModel`,
+// which already exposes `TraditionType` on each card item directly — so the old `createPolicyNode`
+// monkey-patch is no longer needed (the method doesn't exist on the new "screen" anyway).
+//
+// We keep the decorator solely to warm `PolicyYieldsCache` when the user opens the policy screen.
 
+class ScreenPoliciesYieldsDecorator {
     constructor(val) {
         this.screen = val;
-
-        this.applyPrototypePatch();
     }
 
     beforeAttach() {
@@ -16,28 +21,6 @@ class ScreenPoliciesYieldsDecorator {
     afterAttach() {}
     beforeDetach() {}
     afterDetach() {}
-
-    /**
-     * We need to patch the `createPolicyNode` method to set the TraditionType on the node so we can preview the yields.
-     * This is necessary because the TraditionType is not available on the node by default.
-     */
-    applyPrototypePatch() {
-        const proto = Object.getPrototypeOf(this.screen);
-        if (ScreenPoliciesYieldsDecorator.latestAppliedProto === proto) {
-            return;
-        }
-        
-        const _createPolicyNode = proto.createPolicyNode;
-        
-        proto.createPolicyNode = function (policy, isSelectable) {
-            const node = _createPolicyNode.call(this, policy, isSelectable);
-            
-            // We need to set the TraditionType on the node so we can preview the yields
-            node.TraditionType = policy.TraditionType;
-
-            return node;
-        };
-    }
 }
 
 // @ts-ignore
