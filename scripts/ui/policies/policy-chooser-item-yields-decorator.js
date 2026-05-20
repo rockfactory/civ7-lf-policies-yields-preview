@@ -56,9 +56,9 @@ function injectYieldsIntoCard(card) {
         const result = previewPolicyYields({ TraditionType: traditionType });
         const previewBox = renderYieldsPreviewBox(result);
         if (previewBox) {
-            // Nudge up via negative margin-top: the box overlaps the previous sibling by 4px,
-            // pulling the box visually higher while keeping the card height roughly unchanged.
-            previewBox.style.marginTop = '-4px';
+            // Positioning (negative margin-top + translateY) lives in yields-styles.js,
+            // scoped to `.policy-base-card > .yields-preview__root` so it can be tuned
+            // there alongside the rest of the policy-card styling.
             card.appendChild(previewBox);
         }
         card.dataset.lfYieldsInjected = '1';
@@ -79,12 +79,54 @@ function scanForCards(root) {
     }
 }
 
+// Mark each .empty-base-card with data-lf-slot-covered="1" iff the
+// .policy-base-card at the same positional index is opaque (i.e., not the
+// empty placeholder emitted by activeTraditionsWithEmpties, which carries
+// `opacity-0`). The CSS rule that hides the slot's icon-pod is scoped to this
+// marker so empty slots keep their "Add policy/tradition" icon visible.
+//
+// Why data-attribute and not a class: the slot's CardSlot component (see
+// policy-card.js around line 213-217) binds `class` through Solid's `spread`
+// with a reactive getter that depends on policiesFocus()/traditionsFocus(), so
+// any class we add gets wiped the next time the focus signal changes. Data
+// attributes are not touched by that binding.
+//
+// Layout reference (policies-and-traditions.js _tmpl$7):
+//   .policies-2-col
+//     > .relative.flex-wrap                              (cards container)
+//         > .absolute.pointer-events-none.flex-wrap      (slots container)
+//         > .policy-base-card ...                        (cards, in DOM order)
+function refreshSlotCoverage(col) {
+    const cardContainer = col.firstElementChild;
+    if (!cardContainer) return;
+    const slotContainer = cardContainer.firstElementChild;
+    if (!slotContainer || !slotContainer.classList?.contains('pointer-events-none')) return;
+
+    const slots = Array.from(slotContainer.children).filter(el => el.classList?.contains('empty-base-card'));
+    const cards = Array.from(cardContainer.children).filter(el => el.classList?.contains('policy-base-card'));
+
+    slots.forEach((slot, i) => {
+        const card = cards[i];
+        const isCovered = !!card && !card.classList.contains('opacity-0');
+        if (isCovered) {
+            slot.dataset.lfSlotCovered = '1';
+        } else {
+            delete slot.dataset.lfSlotCovered;
+        }
+    });
+}
+
+function refreshAllSlotCoverage() {
+    document.querySelectorAll('.policies-2-col').forEach(refreshSlotCoverage);
+}
+
 const cardObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
             scanForCards(node);
         }
     }
+    refreshAllSlotCoverage();
 });
 
 cardObserver.observe(document.body, { childList: true, subtree: true });

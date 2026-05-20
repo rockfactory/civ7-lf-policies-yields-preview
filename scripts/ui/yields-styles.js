@@ -68,6 +68,43 @@ export function setupCSSStyles() {
         align-items: center;
         justify-content: flex-start;
     }
+
+    /* Policy cards: shrink the preview to its content (otherwise it stretches
+       to the full card width via the parent's flex-column align-items:stretch).
+       - width: max-content (not fit-content) + no max-width cap: in Coherent
+         Gameface, align-self:center + fit-content was collapsing the box to
+         min-content and forcing items to wrap to multiple lines even when
+         there was room. max-content forces the box to its natural one-line width.
+       - translateY + negative margin-top lift the box up to clear the card's
+         bottom decorative frame and reclaim some vertical space inside the
+         fixed-height card. Tune the magnitudes as needed. */
+    .policy-base-card > .yields-preview__root {
+        align-self: center;
+        width: max-content;
+        margin-top: -24px;
+        transform: translateY(-18px);
+    }
+
+    /* Inside policy cards, never wrap the yields onto multiple lines: a
+       compact one-line preview is the whole point. */
+    .policy-base-card > .yields-preview__root div.yields-preview__container {
+        flex-wrap: nowrap;
+    }
+
+    /* Empty slot frames behind active policy cards: hide the slot's icon-pod
+       only when an opaque PolicyCard sits on top (the data-lf-slot-covered
+       marker is toggled by policy-chooser-item-yields-decorator.js — using a
+       data-attribute, not a class, because Solid reactively overwrites the
+       slot's class attribute via its spread binding on focus changes).
+       Without a card on top the slot must keep showing its icon + "Add
+       policy/tradition" label, otherwise empty slots look broken.
+
+       Reason for the rule when covered: the card's flex-auto icon row is
+       shorter than the slot's size-full row (yields preview steals ~94px),
+       so the slot icons end up ~47px lower than the card icons and peek out. */
+    .empty-base-card[data-lf-slot-covered="1"] .w-6 {
+        visibility: hidden;
+    }
     `;
     document.head.appendChild(style);
 
