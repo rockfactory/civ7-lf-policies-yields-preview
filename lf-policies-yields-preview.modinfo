@@ -60,6 +60,7 @@
 					<Item>scripts/core/execution-context.js</Item>
 					<Item>scripts/ui/render-yields-preview.js</Item>
 					<Item>scripts/ui/yields-styles.js</Item>
+					<Item>scripts/ui/solid-helpers.js</Item>
 					<Item>scripts/ui/policies/policy-chooser-item-yields-decorator.js</Item>
 					<Item>scripts/ui/policies/screen-policies-yields-decorator.js</Item>
 					<Item>scripts/ui/attributes/attribute-card-yields-decorator.js</Item>

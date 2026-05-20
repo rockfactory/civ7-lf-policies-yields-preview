@@ -1,23 +1,24 @@
 import { previewModifiersYields, previewPolicyYields } from '../../preview-yields.js';
 import { resolveModifierById } from '../../modifiers.js';
 import { renderYieldsPreviewBox } from '../render-yields-preview.js';
+import { findExpandoOnAncestor } from '../solid-helpers.js';
 import { getUnlockTargetDescriptions, getUnlockTargetName } from '/base-standard/ui/utilities/utilities-textprovider.js';
 import { formatStringArrayAsNewLineText } from '/core/ui/utilities/utilities-core-textprovider.js';
 
 console.warn('LFYieldsPreview: Tech/Civic Tooltip Decorator (1.4.0)');
 
 // In 1.4.0 both choosers (`tech-chooser-item.js`, `culture-chooser-item.js`) and the full
-// tech/civic tree (`tree-card-v2.js`, legacy `tree-card.js`) render the SAME Solid `TechCivicTooltip`
-// component, which mounts via a `<Portal>` into `#uinext-tooltips` and has no update()/hoveredNodeID
-// hooks. Strategy: track the hovered node via `mouseover` capture, then on a short setTimeout query
-// the mounted `.tech-civic-tooltip` and inject yield boxes (re-injecting if the node changes while
-// the tooltip stays mounted, since Solid reuses the DOM across hovers).
+// tech/civic tree (`tree-card-v2.js`) render the SAME Solid `TechCivicTooltip` component, which
+// mounts via a `<Portal>` into `#uinext-tooltips` and has no update()/hoveredNodeID hooks.
+// Strategy: track the hovered node via `mouseover` capture, then on a short setTimeout query the
+// mounted `.tech-civic-tooltip` and inject yield boxes (re-injecting if the node changes while the
+// tooltip stays mounted, since Solid reuses the DOM across hovers).
 
 let _lastHoveredNodeType = null;
 let _lastHoveredDepthIndex = null; // null = use nodeData.depthUnlocked
 
 const DEBUG = false;
-function dbg(...args) { if (DEBUG) console.warn('[LFYieldsPreview]', ...args); }
+function debug(...args) { if (DEBUG) console.warn('[LFYieldsPreview]', ...args); }
 
 // ----------------------------------------------------------------------------------------------------
 // Hover tracking (single capture handler on document.body — covers chooser items and tree cards)
@@ -27,41 +28,39 @@ function trackHover(event) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
-    let rawNodeAttr = null;
+    let rawNodeType = null;
     let depthIndex = null;
     let triggerSource = null;
 
     // Choosers: tech-chooser-item / culture-chooser-item set `node-id` on the ChooserItem root.
     const chooserTrigger = target.closest('[node-id]');
     if (chooserTrigger) {
-        rawNodeAttr = chooserTrigger.getAttribute('node-id');
+        rawNodeType = chooserTrigger.getAttribute('node-id');
         triggerSource = 'chooser';
+    // Full tree view (screen-tech-tree.js / screen-culture-tree.js use tree-card-v2
     } else {
-        // Full tree view. Two variants:
-        //  - Legacy tree-card.js — `type` and `level` are set on the `.tree-card-hitbox` child
-        //    (each mastery tier has its own hitbox with its own `level`).
-        //  - Solid tree-card-v2.js — registered via defineLegacyComponent("tree-card-v2", { attrs:
-        //    { type, ... } }), so `type` sits directly on the `<tree-card-v2>` custom element.
-        const hitbox = target.closest('.tree-card-hitbox[type], tree-card-v2[type]');
-        if (hitbox) {
-            rawNodeAttr = hitbox.getAttribute('type');
-            const levelAttr = hitbox.getAttribute('level');
-            depthIndex = levelAttr != null ? Number(levelAttr) : null;
-            triggerSource = hitbox.tagName.toLowerCase();
+        const treeCard = target.closest('tree-card-v2[type]');
+        if (treeCard) {
+            rawNodeType = treeCard.getAttribute('type');
+            const nodeCardLevel = findExpandoOnAncestor(target, 'dataLevel', treeCard);
+            if (nodeCardLevel != null) {
+                depthIndex = Number(nodeCardLevel);
+            }
+            triggerSource = 'tree-card-v2';
+            debug('tree hover: type=', rawNodeType, 'dataLevel(expando)=', nodeCardLevel, 'resolved depth=', depthIndex);
         }
     }
 
-    if (!rawNodeAttr) return;
+    if (!rawNodeType) return;
 
-    // `Game.ProgressionTrees.getNode` expects a numeric hash. The DOM exposes attributes as strings,
-    // so we coerce — but keep the original string as a fallback for any callsite that might use it.
-    const asNumber = Number(rawNodeAttr);
-    const nodeType = Number.isFinite(asNumber) ? asNumber : rawNodeAttr;
+    // `Game.ProgressionTrees.getNode` expects a numeric hash, while 
+    // DOM attributes are strings
+    const nodeType = Number(rawNodeType);
     if (nodeType === _lastHoveredNodeType && depthIndex === _lastHoveredDepthIndex) return;
 
     _lastHoveredNodeType = nodeType;
     _lastHoveredDepthIndex = depthIndex;
-    dbg('hover node', nodeType, 'depth', depthIndex, 'from', triggerSource);
+    debug('hover node', nodeType, 'depth', depthIndex, 'from', triggerSource);
 
     // Re-inject for any mounted tooltip (Solid may reuse the DOM across hovers).
     scheduleInjection();
@@ -145,7 +144,7 @@ function clearPreviousInjection(tooltipEl) {
 function injectYieldsPreview(tooltipEl) {
     const nodeType = _lastHoveredNodeType;
     if (!nodeType) {
-        dbg('skip: no hovered node');
+        debug('skip: no hovered node');
         return;
     }
 
@@ -166,7 +165,7 @@ function injectYieldsPreview(tooltipEl) {
         const localPlayerId = GameContext.localPlayerID;
         const nodeData = Game.ProgressionTrees.getNode(localPlayerId, nodeType);
         if (!nodeData) {
-            dbg('skip: nodeData not found for', nodeType);
+            debug('skip: nodeData not found for', nodeType);
             return;
         }
 
@@ -176,17 +175,17 @@ function injectYieldsPreview(tooltipEl) {
             : (nodeData.depthUnlocked ?? 0);
         const depth = perDepth[depthIndex];
         if (!depth) {
-            dbg('skip: no depth data', nodeType, 'depthIndex', depthIndex, 'available', perDepth.length);
+            debug('skip: no depth data', nodeType, 'depthIndex', depthIndex, 'available', perDepth.length);
             return;
         }
-        dbg('injecting for', nodeType, 'depth', depthIndex,
+        debug('injecting for', nodeType, 'depth', depthIndex,
             'visibleUnlocks', depth.visibleUnlocks.length, 'hiddenModifiers', depth.hiddenModifierIds.length);
 
         // --- Per-unlock box: traditions and visible modifiers both get matched in DOM by name and
         //     get their own box appended on the right of the matching UnlockItem row,
         //     mirroring how vanilla constructible unlocks (e.g. "Felicità +3" on Altare) lay out.
         const unlockItems = Array.from(tooltipEl.querySelectorAll('[class*="img-base-ticket-bg"]'));
-        dbg('unlock items in DOM:', unlockItems.length);
+        debug('unlock items in DOM:', unlockItems.length);
         const usedItems = new Set();
         for (const unlock of depth.visibleUnlocks) {
             const normalized = normalizeText(Locale.compose(unlock.displayName) || unlock.displayName);
@@ -199,7 +198,7 @@ function injectYieldsPreview(tooltipEl) {
                 }
             }
             if (!matchedItem) {
-                dbg('  unlock not matched in DOM:', unlock.displayName, '(normalized:', normalized, ')');
+                debug('  unlock not matched in DOM:', unlock.displayName, '(normalized:', normalized, ')');
                 continue;
             }
             usedItems.add(matchedItem);
@@ -255,7 +254,7 @@ function scheduleInjection() {
         _scheduled = false;
         const tooltips = document.querySelectorAll('.tech-civic-tooltip');
         if (tooltips.length === 0) {
-            dbg('scheduled injection: no .tech-civic-tooltip in DOM yet');
+            debug('scheduled injection: no .tech-civic-tooltip in DOM yet');
             return;
         }
         for (const tooltip of tooltips) injectYieldsPreview(tooltip);
