@@ -6,7 +6,7 @@ import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyC
 import { getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
 import { calculateMaintenanceEfficiencyToReduction, parseArgumentsArray } from "../game/helpers.js";
 import { resolveSubjectsWithRequirements } from "../requirements/resolve-subjects.js";
-import { getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier } from "../game/player.js";
+import { countPlayerResourcesByClass, countPlayerResourcesByType, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier } from "../game/player.js";
 import { findCityConstructiblesMatchingWarehouse, getYieldsForWarehouseChange } from "../game/warehouse.js";
 import { PolicyYieldsContext } from "../core/execution-context.js";
 import { assertSubjectCity, assertSubjectConstructible, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "../requirements/assert-subject.js";
@@ -143,6 +143,29 @@ function applyYieldsForSubject(context, subject, modifier) {
             return context.addSubjectYieldsTimes(subject, modifier, completedMasteries);
         }
 
+        case "EFFECT_PLAYER_ADJUST_YIELD_PER_UNIQUE_CIV_CONQUERED_CITY": {
+            assertSubjectPlayer(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const count = countUniqueConqueredCivilizations(subject.player);
+            return context.addYieldsAmountTimes(modifier, count);
+        }
+
+        case "EFFECT_PLAYER_ADJUST_YIELD_PER_RESOURCE_TYPE": {
+            assertSubjectPlayer(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const resourceType = modifier.Arguments.getAsserted('ResourceType');
+            const count = countPlayerResourcesByType(subject.player, resourceType);
+            return context.addYieldsAmountTimes(modifier, count);
+        }
+
+        case "EFFECT_PLAYER_ADJUST_YIELD_PER_RESOURCE_CLASS": {
+            assertSubjectPlayer(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const resourceClassType = modifier.Arguments.getAsserted('ResourceClassType');
+            const count = countPlayerResourcesByClass(subject.player, resourceClassType);
+            return context.addYieldsAmountTimes(modifier, count);
+        }
+
         case "EFFECT_ATTACH_MODIFIERS": {
             // Nested modifiers; they are applied once for each subject from the parent modifier.
             const nestedModifierId = modifier.Arguments.getAsserted('ModifierId');
@@ -259,11 +282,15 @@ function applyYieldsForSubject(context, subject, modifier) {
 
         case "EFFECT_CITY_ACTIVATE_CONSTRUCTIBLE_ADJACENCY": {
             assertSubjectCity(subject);
-            const adjancencies = parseArgumentsArray(modifier.Arguments, 'ConstructibleAdjacency'); 
+            const adjancencies = parseArgumentsArray(modifier.Arguments, 'ConstructibleAdjacency');
             adjancencies.forEach(adjacencyId => {
                 const adjacencyType = AdjancenciesCache.get(adjacencyId);
                 if (!adjacencyType) {
-                    throw new Error(`AdjacencyType not found for ID: ${adjacencyId}`);
+                    // Defensive: some modifiers reference adjacency IDs that are gated by
+                    // RequiresActivation or not yet loaded in the current age (e.g. JINSI_KAMIL).
+                    // Skip silently with a warning instead of crashing the whole preview.
+                    console.warn(`${modifier.Modifier.ModifierId}: AdjacencyType not found for ID: ${adjacencyId}`);
+                    return;
                 }
                 // console.warn("EFFECT_CITY_ACTIVATE_CONSTRUCTIBLE_ADJACENCY AdjacencyType", adjacencyType.ID, subject.city?.name);
                 
@@ -295,7 +322,8 @@ function applyYieldsForSubject(context, subject, modifier) {
             adjancencies.forEach(adjacencyId => {
                 const adjacencyType = AdjancenciesCache.get(adjacencyId);
                 if (!adjacencyType) {
-                    throw new Error(`AdjacencyType not found for ID: ${adjacencyId}`);
+                    console.warn(`${modifier.Modifier.ModifierId}: AdjacencyType not found for ID: ${adjacencyId}`);
+                    return;
                 }
                 
                 const validConstructibles = findCityConstructiblesMatchingAdjacency(subject.isEmpty ? null : subject.city, adjacencyId);
@@ -506,10 +534,41 @@ function applyYieldsForSubject(context, subject, modifier) {
             return context.addYieldsAmountTimes(modifier, assignedResources);
         }
 
+        case "EFFECT_CITY_ADJUST_YIELD_PER_AVAILABLE_RESOURCE_TYPE": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const resourceType = modifier.Arguments.getAsserted('ResourceType');
+            const count = countPlayerResourcesByType(player, resourceType);
+            return context.addYieldsAmountTimes(modifier, count);
+        }
+
+        // Flat yield/turn given to constructibles matching a Tag, scaled per copy of ResourceType owned.
+        // Implemented for both YIELD and PRODUCTION variants (the latter uses YIELD_PRODUCTION and is
+        // semantically flat — NOT the % build-time modifier of EFFECT_CITY_ADJUST_CONSTRUCTIBLE_PRODUCTION).
+        case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_YIELD_PER_RESOURCE":
+        case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_PRODUCTION_PER_RESOURCE": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const resourceType = modifier.Arguments.getAsserted('ResourceType');
+            const resourcesOwned = countPlayerResourcesByType(player, resourceType);
+            if (resourcesOwned === 0) return context.addYieldsAmount(modifier, 0);
+            const buildingsCount = getBuildingsCountForModifier([subject.city], modifier);
+            return context.addYieldsAmountTimes(modifier, buildingsCount * resourcesOwned);
+        }
+
         case "EFFECT_CITY_ADJUST_YIELD_PER_SUZERAIN": {
             assertSubjectCity(subject);
             const cityStates = subject.isEmpty ? 0 : getPlayerCityStatesSuzerain(player).length;
             return context.addYieldsAmountTimes(modifier, cityStates);
+        }
+
+        case "EFFECT_CITY_ADJUST_YIELD_PER_SUZERAINED_CITY_STATE_TYPE": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            // TODO verify trait mapping (TRAIT_CITY_STATE_<TYPE>); falls back to full suzerain count if no match
+            const csType = modifier.Arguments.getAsserted('CityStateType');
+            const count = getPlayerCityStatesSuzerainOfType(player, csType);
+            return context.addYieldsAmountTimes(modifier, count);
         }
 
         case "EFFECT_CITY_ADJUST_YIELD_PER_SURPLUS_HAPPINESS": {
@@ -587,6 +646,17 @@ function applyYieldsForSubject(context, subject, modifier) {
             }
 
             throw new Error(`Unhandled subject type for EFFECT_CITY_ADJUST_SUZERAIN_OF_CONSTRUCTIBLE_YIELD: ${JSON.stringify(subject)}`);
+        }
+
+        // ==============================
+        // ====== Constructible =========
+        // ==============================
+        // SubjectRequirements (e.g. REQUIREMENT_CONSTRUCTIBLE_TAG_MATCHES,
+        // REQUIREMENT_PLOT_FEATURE_TYPE_MATCHES) already filter the constructibles upstream.
+        // TODO: support Percent if a real-world modifier requires it.
+        case "EFFECT_CONSTRUCTIBLE_ADJUST_YIELD": {
+            assertSubjectConstructible(subject);
+            return context.addSubjectYieldsTimes(subject, modifier, subject.isEmpty ? 0 : 1);
         }
 
         // ==============================
@@ -692,6 +762,27 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_ADJUST_PLAYER_VALID_IMPROVEMENT":
         case "EFFECT_CITY_ADD_RESOURCE_TO_PLOT":
         case "EFFECT_CITY_ADJUST_TRADE_ROUTE_RANGE_PER_SUZERAIN_OF":
+        // One-time / triggered yield grants — not previewable as steady-state
+        case "EFFECT_PLAYER_GRANT_YIELD":
+        case "EFFECT_CITY_GRANT_YIELD":
+        case "EFFECT_MODIFY_PLAYER_YIELD_FOR_X_TURNS":
+        case "EFFECT_MODIFY_CITY_YIELD_FOR_X_TURNS":
+        case "EFFECT_PLAYER_GRANT_YIELD_NARRATIVE":
+        case "EFFECT_PLAYER_GRANT_YIELD_DISCOVERY":
+        case "EFFECT_CITY_GRANT_YIELD_DISCOVERY":
+        case "EFFECT_PLAYER_ADD_YIELD_DEBT_NARRATIVE":
+        case "EFFECT_PLAYER_ADJUST_YIELD_FOR_COMPLETING_NARRATIVE_EVENTS":
+        // Production %/build-time modifiers — coherent with EFFECT_CITY_ADJUST_CONSTRUCTIBLE_PRODUCTION
+        case "EFFECT_CITY_ADJUST_FAVORED_WONDER_PRODUCTION":
+        case "EFFECT_CITY_ADJUST_BIOME_WONDER_PRODUCTION_PER_RESOURCE":
+        case "EFFECT_DAE_GRANT_COOPERATIVE_YIELD_SUPPORT_BASE_PER_TURN":
+        // Combat / movement / non-yield unit modifiers (seen in MARAKKALAM, ISA, STRATEGOI nested)
+        case "EFFECT_ADJUST_UNIT_TRADE_ROUTE_COMBAT_MODIFIER":
+        case "EFFECT_UNIT_ADJUST_IGNORE_MOVEMENT_OBSTACLE":
+        case "EFFECT_ADJUST_UNIT_SUZERAIN_OF_COMBAT_MODIFIER":
+        // Belief yields are scoped to the Belief Picker UI (not decorated by this mod),
+        // age-transition bonuses, and narrative events — none of which are previewed here.
+        case "EFFECT_ADD_RELIGIOUS_BELIEF_YIELD":
             return;
 
         default:

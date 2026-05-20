@@ -159,9 +159,10 @@ function resolveBaseSubjects(modifier, parentSubject = null) {
             });
         }
         
-        // We treat the MAJOR_PLAYERS as a special case, since we are interested only 
+        // We treat the MAJOR_PLAYERS as a special case, since we are interested only
         // in our player
         case "COLLECTION_MAJOR_PLAYERS":
+        case "COLLECTION_ALL_PLAYERS":
         case "COLLECTION_OWNER":
             return [{
                 type: "Player",
@@ -264,6 +265,11 @@ function resolveBaseSubjects(modifier, parentSubject = null) {
         case "COLLECTION_CITIES_FOLLOWING_OWNER_RELIGION": // Technically easy to grab, but no interesting effects applied
         // Recognized, but we can't provide simple yields for these:
         case "COLLECTION_PLAYER_COMBAT":
+        // Per-plot bonuses from constructible-modifiers or globals affecting other players.
+        // not relevant for our local-player yield preview (atleast, I think)
+        case "COLLECTION_SINGLE_PLOT_YIELDS":
+        case "COLLECTION_ALL_PLOT_YIELDS":
+        case "COLLECTION_ALL_CAPITAL_CITIES":
             return [];
 
         // Districts

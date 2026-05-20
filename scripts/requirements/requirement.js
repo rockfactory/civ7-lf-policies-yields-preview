@@ -1,7 +1,7 @@
 import { hasUnitTag, isUnitTypeInfoTargetOfArguments } from "../game/units.js";
 import { getCityGreatWorksCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
 import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType } from "../game/plot.js";
-import { isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
+import { getPlayerCityStatesSuzerain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
 import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "./assert-subject.js";
 import { PolicyExecutionContext } from "../core/execution-context.js";
 import { PolicyYieldsCache } from "../cache.js";
@@ -158,6 +158,11 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return subject.city.Constructibles.getNumWonders() > 0;
         }
 
+        case "REQUIREMENT_CITY_CONQUERED_ANY_AGE": {
+            assertSubjectCity(subject);
+            return subject.city.originalOwner !== player.id;
+        }
+
         // Plot
         case "REQUIREMENT_PLOT_DISTRICT_CLASS": {
             assertSubjectPlot(subject);
@@ -180,6 +185,25 @@ export function isRequirementSatisfied(player, subject, requirement) {
             assertSubjectPlot(subject);
             const loc = GameplayMap.getLocationFromIndex(subject.plot);
             return GameplayMap.isCoastalLand(loc.x, loc.y);
+        }
+
+        case "REQUIREMENT_PLOT_IS_COAST": {
+            // The plot IS a coast water tile (TERRAIN_COAST). Different from
+            // REQUIREMENT_PLOT_IS_COASTAL_LAND (which is land adjacent to coast).
+            assertSubjectPlot(subject);
+            const loc = GameplayMap.getLocationFromIndex(subject.plot);
+            const terrain = GameInfo.Terrains.lookup(GameplayMap.getTerrainType(loc.x, loc.y));
+            return terrain?.TerrainType === 'TERRAIN_COAST';
+        }
+
+        case "REQUIREMENT_PLOT_IS_SUZERAIN_BY_OWNER": {
+            // The plot is owned by a city-state of which the local player is the suzerain.
+            // Used in OR-sets with REQUIREMENT_PLOT_IS_OWNER (e.g. Dai Viet RUONG_LANG_XA II).
+            assertSubjectPlot(subject);
+            const loc = GameplayMap.getLocationFromIndex(subject.plot);
+            const plotOwner = GameplayMap.getOwner(loc.x, loc.y);
+            if (plotOwner < 0 || plotOwner === player.id) return false;
+            return getPlayerCityStatesSuzerain(player).some(cs => cs.id === plotOwner);
         }
 
         case "REQUIREMENT_PLOT_ADJACENT_TO_COAST": {
@@ -292,9 +316,20 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return true;
         }
 
-        // Units
+        // Constructible
+        case "REQUIREMENT_CONSTRUCTIBLE_TAG_MATCHES": {
+            if (subject.type !== 'Constructible') return false;
+            const tag = requirement.Arguments.getAsserted('Tag');
+            const type = subject.constructibleType?.ConstructibleType;
+            if (!type) return false;
+            return PolicyYieldsCache.hasTypeTag(type, tag);
+        }
+
+        // Units. Note: some base-game XMLs apply unit requirements to non-unit subjects
+        // (e.g. STRATEGOI nested modifier on COLLECTION_OWNER). Returning false defensively
+        // avoids crashing the whole policy preview for those mismatches.
         case "REQUIREMENT_UNIT_TAG_MATCHES": {
-            assertSubjectUnit(subject);
+            if (subject.type !== 'Unit') return false;
             return hasUnitTag(subject.unit, requirement.Arguments.getAsserted('Tag'));
         }
 
@@ -418,13 +453,25 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return true;
         }
 
+        case "REQUIREMENT_PLAYER_IS_IN_GOLDEN_AGE": {
+            assertSubjectPlayer(subject);
+            return subject.player.Happiness?.isInGoldenAge() === true;
+        }
+
         // Ignored requirements. Usually because they relate to _combat_ bonuses, and we don't display those.
         case "REQUIREMENT_COMMANDER_HAS_X_PROMOTIONS":
         case "REQUIREMENT_PLOT_IS_SUZERAIN":
         case "REQUIREMENT_ENGAGED_TARGET_OF_TARGET_MATCHES":
         case "REQUIREMENT_OPPONENT_IS_DISTRICT":
         case "REQUIREMENT_PLOT_IN_COMMAND_RADIUS": // IRON_CROSS
-        case "REQUIREMENT_PLAYER_IS_ATTACKING": {
+        case "REQUIREMENT_PLAYER_IS_ATTACKING":
+        case "REQUIREMENT_PLOT_ADJACENT_FRIENDLY_UNIT_TAG_MATCHES": // combat (GARDE_IMPERIALE, KSHATRIYA)
+        // Gating for one-time triggered effects we already ignore (EFFECT_CITY_GRANT_YIELD on capture)
+        case "REQUIREMENT_PLAYER_FIRST_TIME_SETTLEMENT_OCCUPATION":
+        // Triggered events: only gate one-shot effects (EFFECT_CITY_GRANT_UNIT for BUZZARD_CULT)
+        case "REQUIREMENT_PLAYER_MAKES_PEACE_IMMEDIATE":
+        // Narrative-only (Gilgamesh DLC narrative-stories-gameeffects-modern.xml)
+        case "REQUIREMENT_PLAYER_HAS_X_ALLIANCES": {
             return false;
         }
 

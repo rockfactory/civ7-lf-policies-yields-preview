@@ -1,11 +1,18 @@
 declare var engine: any;
 declare class Component {}
 declare var Controls: any;
+declare interface PlayerReligion {
+    getReligionType: () => number; // -1 if no religion
+    getReligionName: () => string;
+    getBeliefs: () => number[];
+    getPantheonType: () => number;
+}
+
 declare var Players: {
     get: (playerId: number) => Player;
     getAlive: () => Player[];
     Religion?: {
-        get: (playerId: number) => any;
+        get: (playerId: number) => PlayerReligion | null;
     }
 };
 declare var GameContext: any;
@@ -140,6 +147,31 @@ declare interface ProgressionResearchedNode {
     progress: number;
 }
 
+declare interface PlayerResourceEntry {
+    value: number;
+    uniqueResource: {
+        resource: number; // numeric ResourceType hash; lookup with GameInfo.Resources.lookup(...)
+    };
+}
+
+declare interface PlayerResources {
+    getResources: () => PlayerResourceEntry[];
+    getCountImportedResources: () => number;
+    isRessourceAssignmentLocked: () => boolean; // base game typo preserved
+}
+
+declare interface PlayerInfluence {
+    hasSuzerain: boolean;
+    getSuzerain: () => number; // playerId of suzerain, -1 if none
+}
+
+declare interface PlayerHappiness {
+    isInGoldenAge: () => boolean;
+    getGoldenAgeDuration: () => number;
+    getGoldenAgeTurnsLeft: () => number;
+    nextGoldenAgeThreshold: number;
+}
+
 declare interface Player {
     Units: PlayerUnits;
     Cities: PlayerCities;
@@ -154,6 +186,13 @@ declare interface Player {
     Stats: {
         getYields(): YieldEntry[]; // index is the yield type,e.g. 0 = food/gold
         getNetYield: (yieldType: string) => number;
+        getLifetimeYield: (yieldType: string) => number;
+        /**
+         * Number of settlements following the given religion type.
+         * @param religionType numeric religion type from PlayerReligion.getReligionType()
+         * @param isTown true to count only towns, false to count only cities
+         */
+        getNumMyCitiesFollowingSpecificReligion: (religionType: number, isTown: boolean) => number;
         numCities: number;
         numTowns: number;
         numSettlements: number;
@@ -169,8 +208,9 @@ declare interface Player {
     Techs: {
         getResearched(): ProgressionResearchedNode[];
     };
-    Influence: any;
-    Resources: any;
+    Happiness?: PlayerHappiness;
+    Influence?: PlayerInfluence;
+    Resources: PlayerResources;
     isMinor: boolean;
     isMajor: boolean;
     id: number;
