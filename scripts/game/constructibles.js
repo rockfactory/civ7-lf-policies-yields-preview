@@ -1,4 +1,4 @@
-import { calculateMaintenanceEfficiencyToReduction } from "./helpers.js";
+import { computeConstructibleMaintenanceYieldDelta } from "./helpers.js";
 import { ConstructibleAdjacencies } from "./adjacency.js";
 import { PolicyYieldsCache } from "../cache.js";
 
@@ -120,10 +120,10 @@ export function computeConstructibleMaintenanceEfficiencyReduction(city, constru
         const yieldType = GameInfo.Yields[index]?.YieldType;
 
         if (yieldType == "YIELD_GOLD" && modifier.Arguments.Gold?.Value === 'true') {
-            gold += calculateMaintenanceEfficiencyToReduction(modifier, 1, cost, true);
+            gold += computeConstructibleMaintenanceYieldDelta(modifier, cost);
         }
         if (yieldType == "YIELD_HAPPINESS" && modifier.Arguments.Happiness?.Value === 'true') {
-            happiness += calculateMaintenanceEfficiencyToReduction(modifier, 1, cost, true);
+            happiness += computeConstructibleMaintenanceYieldDelta(modifier, cost);
         }
     }
 

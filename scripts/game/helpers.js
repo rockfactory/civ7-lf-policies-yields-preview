@@ -1,49 +1,108 @@
 import { PolicyYieldsCache } from "../cache.js";
 
+// MAINTENANCE EFFICIENCY HELPERS
+//
+// Civilization VII has three distinct effects that all read `Amount` / `Percent`
+// from a modifier but with DIFFERENT semantics. We expose one helper per effect,
+// each returning the *yield delta for the player* (positive = bonus, negative = malus),
+// so call sites can pass the result straight to the delta without further sign juggling.
+//
+//   1. EFFECT_PLAYER_ADJUST_UNIT_MAINTENANCE_EFFICIENCY   → computeUnitMaintenanceYieldDelta
+//        positive Amount = cost reduction      (e.g. LEVIES Amount=1 → "-1 Gold Maintenance")
+//        negative Amount = cost increase       (e.g. IMPOVERISHED_NOBILITY Amount=-1)
+//
+//   2. EFFECT_CITY_ADJUST_WORKER_MAINTENANCE_EFFICIENCY   → computeWorkerMaintenanceYieldDelta
+//        positive Amount = cost increase       (e.g. PATRONAGE Amount=1 → "+1 Happiness Maintenance")
+//        negative Amount = cost reduction      (e.g. COMPUTATION tech Amount=-1)
+//
+//   3. EFFECT_CITY_ADJUST_BUILDING_MAINTENANCE_EFFICIENCY → computeConstructibleMaintenanceYieldDelta
+//        positive Amount = % cost reduction    (game mislabels Percent as Amount in XML;
+//                                                e.g. LIVING_STANDARDS Amount=25 → -25% maintenance)
+//
+// `Percent` is interpreted uniformly across all three: positive Percent is read as
+// "yield-bonus formula" (e.g. FREE_SPEECH Percent=50), negative Percent as direct cost change.
+
 /**
- * Maintenance reduction cannot be more than the maintenance cost itself.
-   Negative values are unbounded.
- * 
-   @param {number} maintenanceCost Positive amount (e.g. 3 to indicate 3 golds spent)
- * @param {number} value The value to be bounded in order to not exceed the maintenance cost 
+ * Bound a maintenance *bonus* so it can't exceed the cost being reduced.
+ * Malus values (negative) pass through unchanged.
+ * @param {number} value Yield delta for the player (positive = bonus)
+ * @param {number} maintenanceCost Total positive maintenance cost
  */
-function getBoundedMaintenanceReduction(value, maintenanceCost) {
+function clampMaintenanceBonus(value, maintenanceCost) {
     return Math.min(value, maintenanceCost);
 }
 
 /**
+ * Shared percent-based formula used by all three maintenance effects.
+ * Returns a yield delta with positive = bonus.
+ *
+ * Positive percent: interpreted as a yield multiplier on the maintenance burden,
+ *   so a +50% modifier on a cost of 10 effectively pays 6.67, saving 3.33.
+ * Negative percent: applied directly to the cost as a malus.
+ *
  * @param {ResolvedModifier} modifier
- * @param {number} count
- * @param {number} maintenanceCost Total maintenance cost (expected a _positive_ value)
- * @param {boolean} isConstructible
+ * @param {number} maintenanceCost Total positive maintenance cost
+ * @returns {number}
  */
-export function calculateMaintenanceEfficiencyToReduction(modifier, count, maintenanceCost, isConstructible = false) {
-    // constructibles mislabel percent efficiency as Amount
-    if (modifier.Arguments.Amount?.Value && !isConstructible) {
-        const reduction = Number(modifier.Arguments.Amount.Value) * count;
-        return getBoundedMaintenanceReduction(reduction, maintenanceCost);
-    }
+function computePercentMaintenanceYieldDelta(modifier, maintenanceCost) {
     const arg = modifier.Arguments.Percent ?? modifier.Arguments.Amount;
-    if (arg?.Value) {
-        if (maintenanceCost < 0) {
-            console.warn(`Maintenance cost is negative: ${maintenanceCost}. Cannot calculate maintenance reduction.`);
-            return 0;
-        }
-
-        let percent = Number(arg.Value) / 100;
-
-        // Can be negative / positive.
-        let value = percent > 0 ?
-            // Positive percent is applied to yields, not to cost; this means that 2 golds
-            // provide X% more gold, not X% less gold to actual cost.
-            maintenanceCost - maintenanceCost / (1 + percent) :
-            // Negative percent instead is applied directly to the maintenance cost.
-            // Since percent < 0 and maintenanceCost > 0, the result is negative (reduction).
-            maintenanceCost * percent;
-
-        return getBoundedMaintenanceReduction(value, maintenanceCost);
+    if (!arg?.Value) {
+        throw new Error(`Maintenance modifier has neither Amount nor Percent: ${JSON.stringify(modifier.Arguments)}`);
     }
-    throw new Error(`Unhandled ModifierArguments: ${JSON.stringify(modifier.Arguments)}. Cannot calculate maintenance reduction.`);
+    if (maintenanceCost < 0) {
+        console.warn(`Maintenance cost is negative: ${maintenanceCost}. Cannot calculate maintenance reduction.`);
+        return 0;
+    }
+
+    const percent = Number(arg.Value) / 100;
+    const value = percent > 0
+        ? maintenanceCost - maintenanceCost / (1 + percent)
+        : maintenanceCost * percent;
+    return clampMaintenanceBonus(value, maintenanceCost);
+}
+
+/**
+ * Yield delta for `EFFECT_PLAYER_ADJUST_UNIT_MAINTENANCE_EFFICIENCY`.
+ * Positive Amount *REDUCES* the unit maintenance cost (player _bonus_ → positive return).
+ * @param {ResolvedModifier} modifier
+ * @param {number} count Number of units affected
+ * @param {number} maintenanceCost Total positive maintenance cost
+ * @returns {number} Yield delta (positive = bonus).
+ */
+export function computeUnitMaintenanceYieldDelta(modifier, count, maintenanceCost) {
+    if (modifier.Arguments.Amount?.Value) {
+        const value = Number(modifier.Arguments.Amount.Value) * count;
+        return clampMaintenanceBonus(value, maintenanceCost);
+    }
+    return computePercentMaintenanceYieldDelta(modifier, maintenanceCost);
+}
+
+/**
+ * Yield delta for `EFFECT_CITY_ADJUST_WORKER_MAINTENANCE_EFFICIENCY`.
+ * Positive Amount *INCREASES* the specialist maintenance cost (player _malus_ → negative return).
+ * @param {ResolvedModifier} modifier
+ * @param {number} specialists Number of specialists in the city
+ * @param {number} maintenanceCost Total positive maintenance cost (2 per specialist)
+ * @returns {number} Yield delta (positive = bonus, negative = malus).
+ */
+export function computeWorkerMaintenanceYieldDelta(modifier, specialists, maintenanceCost) {
+    if (modifier.Arguments.Amount?.Value) {
+        const costDelta = Number(modifier.Arguments.Amount.Value) * specialists;
+        return clampMaintenanceBonus(-costDelta, maintenanceCost);
+    }
+    return computePercentMaintenanceYieldDelta(modifier, maintenanceCost);
+}
+
+/**
+ * Yield delta for `EFFECT_CITY_ADJUST_BUILDING_MAINTENANCE_EFFICIENCY`.
+ * For constructibles the game mislabels percent efficiency as `Amount`; both `Amount`
+ * and `Percent` are interpreted as a percentage reduction.
+ * @param {ResolvedModifier} modifier
+ * @param {number} maintenanceCost Total positive maintenance cost (for ONE constructible)
+ * @returns {number} Yield delta (positive = bonus).
+ */
+export function computeConstructibleMaintenanceYieldDelta(modifier, maintenanceCost) {
+    return computePercentMaintenanceYieldDelta(modifier, maintenanceCost);
 }
 
 /**

@@ -4,7 +4,7 @@ import { computeConstructibleMaintenanceEfficiencyReduction, findCityConstructib
 import { getYieldsForAdjacency, getPlotsGrantingAdjacency, AdjancenciesCache } from "../game/adjacency.js";
 import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyCommanders } from "../game/units.js";
 import { getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
-import { calculateMaintenanceEfficiencyToReduction, parseArgumentsArray } from "../game/helpers.js";
+import { computeUnitMaintenanceYieldDelta, computeWorkerMaintenanceYieldDelta, parseArgumentsArray } from "../game/helpers.js";
 import { resolveSubjectsWithRequirements } from "../requirements/resolve-subjects.js";
 import { countPlayerResourcesByClass, countPlayerResourcesByType, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier } from "../game/player.js";
 import { findCityConstructiblesMatchingWarehouse, getYieldsForWarehouseChange } from "../game/warehouse.js";
@@ -230,9 +230,9 @@ function applyYieldsForSubject(context, subject, modifier) {
                     continue;
                 }
 
-                const reduction = calculateMaintenanceEfficiencyToReduction(
-                    modifier, 
-                    unitTypes[unitType].Count, 
+                const reduction = computeUnitMaintenanceYieldDelta(
+                    modifier,
+                    unitTypes[unitType].Count,
                     unitTypes[unitType].MaintenanceCost
                 );
 
@@ -490,11 +490,7 @@ function applyYieldsForSubject(context, subject, modifier) {
 
             const specialists = getCitySpecialistsCount(subject.city);
             const maintenanceCost = 2 * specialists; // Total Maintenance Cost is 2 per specialist. We could read from `WorkerYields` table where < 0
-            const value = calculateMaintenanceEfficiencyToReduction(
-                modifier,
-                specialists,
-                maintenanceCost
-            );
+            const value = computeWorkerMaintenanceYieldDelta(modifier, specialists, maintenanceCost);
             return context.addYieldsAmount(modifier, value);
         }
 
