@@ -67,6 +67,7 @@
 					<Item>scripts/ui/tech-civic/tech-civic-tooltip-decorator.js</Item>
 					<Item>scripts/ui/city-states/city-state-bonus-yields-decorator.js</Item>
 					<Item>scripts/ui/settings-init.js</Item>
+					<Item>scripts/ui/debug/cheat-panel.js</Item>
 					<Item>scripts/effects/apply-effects.js</Item>
 					<Item>scripts/effects/yields.js</Item>
 					<Item>scripts/game/adjacency.js</Item>

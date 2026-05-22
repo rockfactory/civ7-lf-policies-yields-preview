@@ -32,15 +32,31 @@ const ModSettingsManager = {
     }
 }
 
+/**
+ * Whether the debug cheat option is offered in the Options menu.
+ *
+ * - `true` (dev): the "Show debug cheat panel" checkbox appears in
+ *   Options → Mods → LF Yields, so you can toggle the panel from in-game.
+ * - `false` (release): the option is hidden from the menu, but if `IsDebugMode`
+ *   was already persisted as true from a previous session the panel will
+ *   STILL show: flipping this back to false is safe and won't make your
+ *   panel disappear.
+ */
+export const LF_DEBUG_CHEATS_ENABLED = false;
+
 export const PolicyYieldsSettings = new class {
     _data = {
-        IsColorful: false
+        IsColorful: false,
+        IsDebugMode: false
     };
+
+    /** @type {Array<(value: boolean) => void>} */
+    _debugListeners = [];
 
     constructor() {
         const modSettings = ModSettingsManager.read("LFPolicyYieldsSettings");
         if (modSettings) {
-            this._data = modSettings;
+            this._data = { ...this._data, ...modSettings };
         }
     }
 
@@ -56,5 +72,28 @@ export const PolicyYieldsSettings = new class {
     set IsColorful(value) {
         this._data.IsColorful = value;
         this.save();
+    }
+
+    /**
+     * Follows the persisted value only — independent of `LF_DEBUG_CHEATS_ENABLED`.
+     * That way flipping the master flag back to false (to hide the menu option for
+     * release) doesn't make the panel disappear if the dev already enabled it.
+     */
+    get IsDebugMode() {
+        return !!this._data.IsDebugMode;
+    }
+
+    set IsDebugMode(value) {
+        this._data.IsDebugMode = !!value;
+        this.save();
+        for (const listener of this._debugListeners) {
+            try { listener(this.IsDebugMode); }
+            catch (e) { console.error("[LFPolicyYieldsSettings] debug listener error", e); }
+        }
+    }
+
+    /** @param {(value: boolean) => void} listener */
+    onDebugModeChange(listener) {
+        this._debugListeners.push(listener);
     }
 }

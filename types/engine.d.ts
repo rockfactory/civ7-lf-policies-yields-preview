@@ -1,6 +1,57 @@
-declare var engine: any;
+declare type EngineEventListener = (...args: any[]) => void;
+declare var engine: {
+    on(event: string, listener: EngineEventListener): void;
+    off(event: string, listener: EngineEventListener): void;
+    trigger(event: string, ...args: any[]): void;
+    [key: string]: any;
+};
 declare class Component {}
 declare var Controls: any;
+
+declare var Locale: {
+    compose(key: string, ...args: any[]): string;
+    [key: string]: any;
+};
+
+declare var GameContext: {
+    localPlayerID: number;
+    localObserverID: number;
+    [key: string]: any;
+};
+
+declare var PlayerOperationTypes: {
+    readonly GRANT_TREE_NODE: number;
+    readonly SET_TECH_TREE_NODE: number;
+    readonly SET_TECH_TREE_TARGET_NODE: number;
+    readonly SET_CULTURE_TREE_NODE: number;
+    readonly SET_CULTURE_TREE_TARGET_NODE: number;
+    readonly [key: string]: number;
+};
+
+declare interface PlayerOperationResult {
+    Success: boolean;
+    [key: string]: any;
+}
+
+declare interface PlayerOperationsApi {
+    sendRequest(playerId: number, operationType: number, args: Record<string, any>): void;
+    canStart(playerId: number, operationType: number, args: Record<string, any>, isTest: boolean): PlayerOperationResult;
+}
+
+declare interface ProgressionResearchingNode {
+    type: number;
+    progress?: number;
+    depth?: number;
+}
+
+declare interface PlayerTechs {
+    getResearched(): ProgressionResearchedNode[];
+    getResearching(): ProgressionResearchingNode | null;
+    getTargetNode(): number;
+    getTreeType(): number;
+    getNodeCost(nodeType: number): number;
+    getLastCompletedNodeType(): number;
+}
 declare interface PlayerReligion {
     getReligionType: () => number; // -1 if no religion
     getReligionName: () => string;
@@ -15,10 +66,8 @@ declare var Players: {
         get: (playerId: number) => PlayerReligion | null;
     }
 };
-declare var GameContext: any;
 declare var MapCities: any;
 declare var Loading: any;
-declare var Locale: any;
 declare var RevealedStates: any;
 declare var WorldUI;
 
@@ -137,6 +186,11 @@ interface PlayerCulture {
     getGreatWorkType: (index: number) => number;
     getActiveTraditions: () => number[];
     getResearched(): ProgressionResearchedNode[];
+    getResearching(): ProgressionResearchingNode | null;
+    getTargetNode(): number;
+    getAvailableTrees(): number[];
+    getNodeCost(nodeType: number): number;
+    getLastCompletedNodeType(): number;
 }
 
 declare interface ProgressionResearchedNode {
@@ -205,9 +259,7 @@ declare interface Player {
         getMaintenanceForAllUnitsOfType: (unitType: number) => number;
     };
     Trade: any;
-    Techs: {
-        getResearched(): ProgressionResearchedNode[];
-    };
+    Techs: PlayerTechs;
     Happiness?: PlayerHappiness;
     Influence?: PlayerInfluence;
     Resources: PlayerResources;
@@ -321,7 +373,7 @@ declare interface Game {
     ProgressionTrees: {
         getNode(player: Player, type: number): any;
     }
-    PlayerOperations: Record<string, unknown>;
+    PlayerOperations: PlayerOperationsApi;
     Notifications: Record<string, unknown>;
     PlacementRules: Record<string, unknown>;
     IndependentPowers: Record<string, unknown>;

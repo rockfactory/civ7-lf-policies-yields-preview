@@ -10,5 +10,11 @@
         <Row Tag="LOC_MOD_LF_YIELDS_OPTION_COLORFUL_DESC" Language="it_IT">
             <Text>Colora le anteprime delle Rese delle politiche sociali in base al loro tipo, per renderle più facili da distinguere.</Text>
         </Row>
+        <Row Tag="LOC_MOD_LF_YIELDS_OPTION_DEBUG" Language="it_IT">
+            <Text>Mostra pannello debug/cheat</Text>
+        </Row>
+        <Row Tag="LOC_MOD_LF_YIELDS_OPTION_DEBUG_DESC" Language="it_IT">
+            <Text>Mostra un pannello con pulsanti per sbloccare istantaneamente la Tecnologia o la Civica corrente. Solo per debug/test delle rese delle politiche.</Text>
+        </Row>
     </LocalizedText>
 </Database>

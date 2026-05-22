@@ -10,5 +10,11 @@
         <Row Tag="LOC_MOD_LF_YIELDS_OPTION_COLORFUL_DESC">
             <Text>Colors the yield previews of social policies based on their type, making them easier to distinguish.</Text>
         </Row>
+        <Row Tag="LOC_MOD_LF_YIELDS_OPTION_DEBUG">
+            <Text>Show debug cheat panel</Text>
+        </Row>
+        <Row Tag="LOC_MOD_LF_YIELDS_OPTION_DEBUG_DESC">
+            <Text>Shows a floating panel with buttons to instantly unlock the current Tech or Civic. For debugging / testing policy yields.</Text>
+        </Row>
     </EnglishText>
 </Database>
