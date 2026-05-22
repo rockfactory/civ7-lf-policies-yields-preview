@@ -55,10 +55,28 @@ function applyYieldsForSubject(context, subject, modifier) {
             return context.addSubjectYieldsTimes(subject, modifier, allies);
         }
 
-        // TODO Converts x% of yield from trade route into another yield
+        // Gain ToYieldType equal to Percent% of trade income in FromYieldType
+        // (e.g. THRONE_OF_MY_FATHERS: 25% of YIELD_GOLD trade income → YIELD_CULTURE).
         case "EFFECT_MODIFY_PLAYER_TRADE_YIELD_CONVERSION": {
-            throw new Error("EFFECT_MODIFY_PLAYER_TRADE_YIELD_CONVERSION not implemented");
-            return;
+            assertSubjectPlayer(subject);
+            const fromYieldType = modifier.Arguments.getAsserted('FromYieldType');
+            const toYieldType = modifier.Arguments.getAsserted('ToYieldType');
+            const percent = Number(modifier.Arguments.getAsserted('Percent')) / 100;
+
+            if (subject.isEmpty) return context.addYieldTypeAmount(toYieldType, 0);
+
+            // PolicyYieldsCache.getCityTradeYields only extracts YIELD_GOLD "from trade" steps.
+            if (fromYieldType !== "YIELD_GOLD") {
+                console.warn(`${modifier.Modifier.ModifierId}: FromYieldType=${fromYieldType} not supported, only YIELD_GOLD`);
+                return context.addYieldTypeAmount(toYieldType, 0);
+            }
+
+            let totalTradeYield = 0;
+            for (const city of subject.player.Cities.getCities()) {
+                totalTradeYield += PolicyYieldsCache.getCityTradeYields(city) ?? 0;
+            }
+
+            return context.addYieldTypeAmount(toYieldType, totalTradeYield * percent);
         }
 
         case "EFFECT_PLAYER_ADJUST_CONSTRUCTIBLE_YIELD": {
