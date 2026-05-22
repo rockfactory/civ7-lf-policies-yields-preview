@@ -168,10 +168,14 @@ function applyYieldsForSubject(context, subject, modifier) {
 
         case "EFFECT_ATTACH_MODIFIERS": {
             // Nested modifiers; they are applied once for each subject from the parent modifier.
-            const nestedModifierId = modifier.Arguments.getAsserted('ModifierId');
-            const nestedModifier = resolveModifierById(nestedModifierId);
-            const nestedSubjects = resolveSubjectsWithRequirements(player, nestedModifier, subject);
-            return applyYieldsForSubjects(context, nestedSubjects, nestedModifier);
+            // ModifierId may be a comma-separated list (e.g. Market Cross attaches 3 building-yield modifiers).
+            const nestedModifierIds = parseArgumentsArray(modifier.Arguments, 'ModifierId');
+            for (const nestedModifierId of nestedModifierIds) {
+                const nestedModifier = resolveModifierById(nestedModifierId);
+                const nestedSubjects = resolveSubjectsWithRequirements(player, nestedModifier, subject);
+                applyYieldsForSubjects(context, nestedSubjects, nestedModifier);
+            }
+            return;
         }
 
         // Trade
