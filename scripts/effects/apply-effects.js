@@ -596,6 +596,15 @@ function applyYieldsForSubject(context, subject, modifier) {
             return context.addYieldsAmountTimes(modifier, count);
         }
 
+        // Per-city counterpart of EFFECT_PLAYER_ADJUST_YIELD_PER_NUM_TRADE_ROUTES.
+        // Observed only with YieldType + Amount (QULLQA_I/II, AKSUM_SYNCRETISM_EXPLORATION/MODERN).
+        case "EFFECT_CITY_ADJUST_YIELD_PER_TOTAL_NUM_TRADE_ROUTES": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const count = player.Trade.countPlayerTradeRoutes();
+            return context.addYieldsAmountTimes(modifier, count);
+        }
+
         // Flat yield/turn given to constructibles matching a Tag, scaled per copy of ResourceType owned.
         // Implemented for both YIELD and PRODUCTION variants (the latter uses YIELD_PRODUCTION and is
         // semantically flat — NOT the % build-time modifier of EFFECT_CITY_ADJUST_CONSTRUCTIBLE_PRODUCTION).
