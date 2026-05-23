@@ -396,7 +396,14 @@ function applyYieldsForSubject(context, subject, modifier) {
             warehousesYieldChanges.forEach(warehouseYield => {
                 const warehouseYieldType = GameInfo.Warehouse_YieldChanges.find(wyc => wyc.ID === warehouseYield);
                 if (!warehouseYieldType) {
-                    throw new Error(`WarehouseYieldType not found for ID: ${warehouseYield}`);
+                    // Defensive: some Warehouse_YieldChanges rows live in age-scoped *-no-persist.xml
+                    // (e.g. LandHeritageMountainHappiness in age-modern/constructibles-no-persist.xml)
+                    // and only appear in `GameInfo.Warehouse_YieldChanges` while that age is loaded.
+                    // The owning tradition won't actually be selectable outside its age, but the
+                    // preview pipeline can still walk the modifier — skip silently with a warning
+                    // instead of crashing the whole preview (same pattern as AdjacencyType above).
+                    console.warn(`${modifier.Modifier.ModifierId}: WarehouseYieldType not found for ID: ${warehouseYield}`);
+                    return;
                 }
 
                 if (subject.isEmpty) {
@@ -416,7 +423,9 @@ function applyYieldsForSubject(context, subject, modifier) {
             warehousesYields.forEach(warehouseYield => {
                 const warehouseYieldType = GameInfo.Warehouse_YieldChanges.find(wyc => wyc.ID === warehouseYield);
                 if (!warehouseYieldType) {
-                    throw new Error(`WarehouseYieldType not found for ID: ${warehouseYield}`);
+                    // See EFFECT_CITY_GRANT_WAREHOUSE_YIELD above: age-scoped *-no-persist.xml rows.
+                    console.warn(`${modifier.Modifier.ModifierId}: WarehouseYieldType not found for ID: ${warehouseYield}`);
+                    return;
                 }
 
                 const constructibles = findCityConstructiblesMatchingWarehouse(subject.isEmpty ? null : subject.city, warehouseYieldType);
