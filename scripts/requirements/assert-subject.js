@@ -1,19 +1,24 @@
 /**
+ * Accepts any subject that carries a `city` field, since `REQUIREMENT_CITY_*` handlers
+ * read `subject.city`. The game routinely attaches CITY requirements to PLOT-emitting
+ * collections (e.g. PITHI_CHRAT_II / AWISAN_DALEM_II / NORMAN_SYNCRETISM_MODERN /
+ * AMERICA_SYNCRETISM_*: COLLECTION_PLAYER_PLOT_YIELDS + REQUIREMENT_CITY_IS_TOWN/IS_CITY/
+ * IS_ORIGINAL_OWNER/CONQUERED_ANY_AGE) — the plot's owning city is the implicit subject.
  * @param {PreviewSubject} subject
- * @returns {asserts subject is CitySubject}
+ * @returns {asserts subject is CitySubject | PlotSubject | DistrictSubject}
  */
 export function assertSubjectCity(subject) {
-    if (subject.type !== 'City') {
+    if (subject.type !== 'City' && subject.type !== 'Plot' && subject.type !== 'District') {
         throw new Error(`Expected City subject, got ${subject.type}`);
     }
 }
 
 /**
  * @param {PreviewSubject} subject
- * @returns {asserts subject is PlotSubject | CitySubject | UnitSubject | ConstructibleSubject}
+ * @returns {asserts subject is PlotSubject | CitySubject | UnitSubject | ConstructibleSubject | DistrictSubject}
  */
 export function assertSubjectPlot(subject) {
-    if (subject.type !== 'Plot' && subject.type !== 'City' && subject.type !== 'Unit' && subject.type !== 'Constructible') {
+    if (subject.type !== 'Plot' && subject.type !== 'City' && subject.type !== 'Unit' && subject.type !== 'Constructible' && subject.type !== 'District') {
         throw new Error(`Expected Plot subject, got ${subject.type}`);
     }
 }
