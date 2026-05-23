@@ -133,7 +133,12 @@ declare interface GameTrade {
     projectTradeRoutePathPlots(originCityId: ID, targetCityId: ID, domainType: number): number[];
     /** Hypothetical export yields for a route. */
     projectTradeRouteExportYields(originCityId: ID, targetCityId: ID, domainType: number): { yieldType: number; amount: number }[];
-    /** Trade graph edge IDs incident to a city (one per (domain, partner) pair) — used by the Trade tuner. */
+    /**
+     * Returns the trade graph edge IDs incident to the given city (one per domain × partner).
+     * Counter-intuitive: takes a ComponentID `{owner, id, type}` even though the engine logs
+     * "Argument conversion failed: expected <Number or BigInt>, got Object" — the call still
+     * returns the correct iterable. Passing a real bigint bitfield instead returns nothing.
+     */
     getCityGraphEdges(cityId: ID): number[];
     /** Resolve a graph edge id to its full record (domain + active route count + vertices). */
     getGraphEdge(edgeId: number): TradeGraphEdge | null;
@@ -143,6 +148,7 @@ declare interface GameTrade {
 declare interface TradeGraphEdge {
     /** Numeric DomainType id (0 = SEA, 1 = AIR, 2 = LAND — confirmed in Trade.ltp tuner). */
     domain: number;
+    /** Don't filter on this: empirically 0 even when the route is active. Semantics unclear. */
     numActiveRoutes: number;
     fromVertex: TradeGraphVertex;
     toVertex: TradeGraphVertex;

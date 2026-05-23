@@ -247,19 +247,43 @@ export function countPlayerTradeRoutesToCityStates(player) {
 
 /**
  * Resolve a trade route's domain. `TradeRouteInstance` from `city.Trade.routes` does NOT expose
- * a `.domain` field (verified empirically — only the "thin" id/name/cityIDs/payloads are present).
- * The richer view is `player.Trade.getCurrentTradeRoutes()`, which returns the same routes with
- * `.domain` exposed; we match by `route.id` (a primitive number, shared across both views).
- * @param {Player} player
+ * a `.domain` field (verified empirically: only id/name/cityIDs/payloads are present).
+ *
+ * We tried `player.Trade.getCurrentTradeRoutes()` (exposes `.domain` but with `targetCityId/
+ * nearestCityId` semantics flipped relative to outgoing routes — `targetCityId.owner` always
+ * appears to be the local player, so matching a city.Trade.routes outgoing route by partner
+ * doesn't work in practice).
+ *
+ * The trade graph (Game.Trade.getCityGraphEdges + getGraphEdge) IS the authoritative source.
+ * It's what the Trade.ltp tuner panel uses to read `edge.domain` and `edge.numActiveRoutes`.
+ * Each edge connects two vertices (cities) for a specific domain (SEA=0/AIR=1/LAND=2); we find
+ * the active edge that connects our route's two cities and return its domain.
+ * 
+ * In the end, it's really counter-intuitive that the engine doesn't expose 
+ * the domain directly on the route instance, but this is what it is. Or 
+ * maybe I didn't find it. It seems to be working right now, se I'll take it.
+ *
  * @param {TradeRouteInstance} route
  * @returns {number} Numeric DomainType id (compare against `DomainType.DOMAIN_SEA`, etc.).
  */
-export function getTradeRouteDomain(player, route) {
-    const current = player.Trade?.getCurrentTradeRoutes() ?? [];
-    for (const r of current) {
-        if (r.id === route.id) return r.domain;
+export function getTradeRouteDomain(route) {
+    // NOTE Some warnings, but they seems to be wrong. We don't care?
+    const edgeIds = Game.Trade.getCityGraphEdges(route.leftCityID);
+    for (const edgeId of edgeIds) {
+        const edge = Game.Trade.getGraphEdge(edgeId);
+        if (!edge) continue;
+        const from = edge.fromVertex.cityId;
+        const to = edge.toVertex.cityId;
+        if (!from || !to) continue;
+        const matchesForward =
+            from.owner === route.leftCityID.owner && from.id === route.leftCityID.id
+            && to.owner === route.rightCityID.owner && to.id === route.rightCityID.id;
+        const matchesReverse =
+            from.owner === route.rightCityID.owner && from.id === route.rightCityID.id
+            && to.owner === route.leftCityID.owner && to.id === route.leftCityID.id;
+        if (matchesForward || matchesReverse) return edge.domain;
     }
-    throw new Error(`getTradeRouteDomain: route ${route.id} (${route.name}) not found in player.Trade.getCurrentTradeRoutes()`);
+    throw new Error(`getTradeRouteDomain: no graph edge found for route ${route.id} (${route.name}) between ${route.leftCityID.owner}:${route.leftCityID.id} and ${route.rightCityID.owner}:${route.rightCityID.id}`);
 }
 
 /**

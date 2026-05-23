@@ -47,14 +47,18 @@ declare interface TradeRouteInstance {
 
 /**
  * Richer view of a current trade route as returned by `player.Trade.getCurrentTradeRoutes()`.
- * Exposes `.domain` (which the thin `TradeRouteInstance` does not), plus same-id linkage.
+ * Exposes `.domain` (which the thin `TradeRouteInstance` does not). NOTE: does NOT expose
+ * a primitive `id` — verified empirically. The two views are linked via the partner city
+ * (`TradeRouteInstance.rightCityID` ↔ `CurrentTradeRoute.targetCityId` for outgoing routes).
  */
 declare interface CurrentTradeRoute {
-    id: number;
-    /** Numeric DomainType id (0 = SEA, etc.). */
+    /** Numeric DomainType id (0 = SEA, 1 = AIR, 2 = LAND). */
     domain: number;
+    /** Array of TradeRouteStatus codes (e.g. ALREADY_EXISTS for active routes). */
     status: number[];
+    /** Destination/partner city. */
     targetCityId: ID;
+    /** Origin city (closest in our trade network). */
     nearestCityId: ID;
     importPayloads: unknown[];
 }

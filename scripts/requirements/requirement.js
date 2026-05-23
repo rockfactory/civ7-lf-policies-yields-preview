@@ -591,7 +591,7 @@ export function isRequirementSatisfied(player, subject, requirement) {
             if (expected === undefined) {
                 throw new Error(`REQUIREMENT_TRADE_ROUTE_IS_DOMAIN: unknown DomainType ${domainTypeArg}`);
             }
-            return getTradeRouteDomain(subject.player, subject.tradeRoute) === expected;
+            return getTradeRouteDomain(subject.tradeRoute) === expected;
         }
 
         case "REQUIREMENT_PLAYER_IS_MAJOR": {
