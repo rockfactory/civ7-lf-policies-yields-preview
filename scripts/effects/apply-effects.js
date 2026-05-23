@@ -624,11 +624,23 @@ function applyYieldsForSubject(context, subject, modifier) {
             assertSubjectCity(subject);
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
 
-            const numSettlements = modifier.Arguments.Towns?.Value === 'true' 
-                ? subject.player.Stats.numTowns 
+            const numSettlements = modifier.Arguments.Towns?.Value === 'true'
+                ? subject.player.Stats.numTowns
                 : subject.player.Stats.numCities; // Not sure about the latter.
-            
+
             return context.addSubjectYieldsTimes(subject, modifier, numSettlements);
+        }
+
+        // Qajar DLC: +Amount per free settlement slot still under the cap.
+        // Subject is pre-filtered to the capital by COLLECTION_PLAYER_CAPITAL_CITY.
+        case "EFFECT_CITY_ADJUST_YIELD_PER_UNDER_SETTLEMENT_CAP": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+
+            const cap = subject.player.Stats.settlementCap;
+            const numSettlements = subject.player.Stats.numSettlements;
+            const freeSlots = Math.max(0, cap - numSettlements);
+            return context.addYieldsAmountTimes(modifier, freeSlots);
         }
 
         // City OR Constructible
