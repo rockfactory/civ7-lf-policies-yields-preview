@@ -1,3 +1,4 @@
+import DiplomacyManager from "/base-standard/ui/diplomacy/diplomacy-manager.js";
 import { PolicyYieldsCache } from "../cache.js";
 
 /**
@@ -100,7 +101,9 @@ export function getPlayerRelationshipsCountForModifier(player, modifier) {
         }
 
         if (modifier.Arguments.RelationshipType?.Value) {
-            const relationship = player.Diplomacy?.getRelationshipEnum(otherPlayer);
+            // Engine expects the target player ID, not the Player object (runtime
+            // "Wrong type - expected Number or BigInt" otherwise).
+            const relationship = player.Diplomacy?.getRelationshipEnum(otherPlayer.id);
             const relationshipType = DiplomacyManager.getRelationshipTypeString(relationship);
             if (relationshipType == modifier.Arguments.RelationshipType.Value) {
                 allies++;

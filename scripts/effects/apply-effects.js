@@ -957,6 +957,9 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_UNIT_ADJUST_FORTIFICATION_CONSTRUCTION_TIME":          // TUNDIKHEL
         case "EFFECT_ADJUST_UNIT_ADVANCED_PILLAGING":                       // STRANDHOGG (range pillage)
         case "EFFECT_ADJUST_UNIT_ATTACK_RANGE":                             // QUINQUEREME_II
+        case "EFFECT_ADJUST_UNIT_HIDDEN_VISIBILITY":                        // BLACK_FLAG_II atoll stealth
+        case "EFFECT_RESTORE_UNIT_MOVEMENT":                                // SIEGE_TRAIN
+        case "EFFECT_ADJUST_UNIT_RESOURCE_DAMAGE":                          // QUINQUEREME_II resource combat
         // Pillage/Raid yields are triggered on action, not steady-state previewable
         case "EFFECT_ADJUST_UNIT_PERCENT_PILLAGE_BUILDING_MODIFIER":        // SCORCHED_EARTH
         case "EFFECT_ADJUST_UNIT_PERCENT_PILLAGE_IMPROVEMENT_MODIFIER":     // STRATAGEMS

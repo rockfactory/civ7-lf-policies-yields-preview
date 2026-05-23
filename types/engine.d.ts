@@ -237,7 +237,7 @@ declare interface Player {
     Identity: any;
     Diplomacy: {
         getIdeology: () => number; // -1 if no ideology
-        getRelationshipEnum: (otherPlayer: Player) => number;
+        getRelationshipEnum: (otherPlayerId: number) => number;
         hasAllied: (otherPlayerId: number) => boolean;
         isAtWarWith: (otherPlayerId: number) => boolean;
         /**
@@ -542,10 +542,6 @@ declare var ResourceTypes = {
 
 declare var FeatureTypes = {
     NO_FEATURE: -1,
-}
-
-declare var DiplomacyManager: {
-    getRelationshipTypeString(type: number): string;
 }
 
 declare var Configuration: {
