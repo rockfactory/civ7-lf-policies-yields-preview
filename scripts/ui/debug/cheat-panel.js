@@ -69,17 +69,18 @@ function setupStyles() {
         font-size: 0.8rem;
         text-align: left;
     }
-    #${PANEL_ID} button.lf-debug-action:hover:not(:disabled) {
+    #${PANEL_ID} button.lf-debug-action:hover {
         background: rgba(120, 160, 220, 0.8);
     }
-    #${PANEL_ID} button.lf-debug-action:disabled {
+    #${PANEL_ID} button.lf-debug-action.lf-debug-disabled {
         opacity: 0.45;
         cursor: not-allowed;
+        pointer-events: none;
     }
     #${PANEL_ID} button.lf-debug-action.lf-debug-bulk {
         background: rgba(180, 110, 60, 0.6);
     }
-    #${PANEL_ID} button.lf-debug-action.lf-debug-bulk:hover:not(:disabled) {
+    #${PANEL_ID} button.lf-debug-action.lf-debug-bulk:hover {
         background: rgba(220, 140, 80, 0.85);
     }
     #${PANEL_ID}.lf-debug-collapsed {
@@ -303,8 +304,12 @@ function updatePanel() {
 
     techBtn.textContent = `Unlock Tech: ${techText}`;
     civicBtn.textContent = `Unlock Civic: ${civicText}`;
-    techBtn.disabled = techNode == null;
-    civicBtn.disabled = civicNode == null;
+    const techDisabled = techNode == null;
+    const civicDisabled = civicNode == null;
+    techBtn.disabled = techDisabled;
+    techBtn.classList.toggle('lf-debug-disabled', techDisabled);
+    civicBtn.disabled = civicDisabled;
+    civicBtn.classList.toggle('lf-debug-disabled', civicDisabled);
 
     panel.classList.toggle('lf-debug-collapsed', isCollapsed);
     toggleBtn.innerHTML = isCollapsed ? '+' : '&times;';
