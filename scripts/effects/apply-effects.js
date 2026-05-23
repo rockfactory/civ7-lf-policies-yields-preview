@@ -203,6 +203,8 @@ function applyYieldsForSubject(context, subject, modifier) {
         }
 
         // Trade
+        // TODO This is clearly bugged sometimes for Silla (check "Debug_Silla2" savegame)
+        // it says it's adding +9, but in reality the yields are +27.
         case 'EFFECT_ADJUST_PLAYER_ALLIANCE_TRADE': {
             assertSubjectPlayer(subject);
 
@@ -218,24 +220,14 @@ function applyYieldsForSubject(context, subject, modifier) {
             for (const city of player.Cities.getCities()) {
                 const routes = city.Trade.routes;
                 for (const route of routes) {
-                    // The tradition grants the yield "to both players" of an allied route,
-                    // so count routes regardless of which side the player is on.
-                    let otherPlayerID;
-                    if (route.leftCityID.owner === player.id) {
-                        otherPlayerID = route.rightCityID.owner;
-                    } else if (route.rightCityID.owner === player.id) {
-                        otherPlayerID = route.leftCityID.owner;
-                    } else {
-                        continue;
-                    }
+                    // Count only routes outgoing from the player (player on the right side: the
+                    // route name "Commercio da <right>" identifies the right city as the source).
+                    if (route.rightCityID?.owner !== player.id) continue;
+                    const otherPlayerID = route.leftCityID?.owner;
+                    if (!otherPlayerID || otherPlayerID === player.id) continue;
+                    if (!player.Diplomacy?.hasAllied(otherPlayerID)) continue;
 
-                    // Check if allied
-                    if (!otherPlayerID || otherPlayerID === player.id || !player.Diplomacy?.hasAllied(otherPlayerID)) {
-                        continue;
-                    }
-
-                    const routeYieldOfGold = Game.Trade.calculateTradeRouteExportYield(route.id, "YIELD_GOLD");
-                    totalRoutesGold += routeYieldOfGold;
+                    totalRoutesGold += Game.Trade.calculateTradeRouteExportYield(route.id, "YIELD_GOLD");
                 }
             }
 
