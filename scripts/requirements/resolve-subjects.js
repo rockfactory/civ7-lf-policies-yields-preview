@@ -280,6 +280,24 @@ function resolveBaseSubjects(modifier, parentSubject = null) {
             return wrapDistrictSubjects(districts);
         }
 
+        // Nested collection used by MANDARIN_MOD_NAVAL_TRADE_TARGET_CULTURE/TREASURE_FLEET_*
+        // attached via EFFECT_ATTACH_MODIFIERS from a COLLECTION_PLAYER_TRADE_ROUTES parent.
+        // Emits the route's destination CitySubject (rightCityID is the foreign endpoint of
+        // outgoing routes — see filter in COLLECTION_PLAYER_TRADE_ROUTES below).
+        case "COLLECTION_TRADE_ROUTE_TARGET_CITY": {
+            if (parentSubject?.type !== "TradeRoute") {
+                throw new Error("COLLECTION_TRADE_ROUTE_TARGET_CITY requires a parentSubject (TradeRoute)");
+            }
+            if (parentSubject.isEmpty === true) {
+                return [ { isEmpty: true, type: "City" } ];
+            }
+            const destCity = Cities.get(parentSubject.tradeRoute.rightCityID);
+            if (!destCity) {
+                throw new Error(`COLLECTION_TRADE_ROUTE_TARGET_CITY: destination city not found for route ${parentSubject.tradeRoute.id} (${parentSubject.tradeRoute.name})`);
+            }
+            return wrapCitySubjects([destCity]);
+        }
+
         // One TradeRoute subject per outgoing trade route of the local player. Route-scoped
         // requirements (REQUIREMENT_TRADE_ROUTE_IS_DOMAIN, ...) filter on the carried route;
         // EFFECT_PLAYER_ADJUST_YIELD then applies once per surviving route.
