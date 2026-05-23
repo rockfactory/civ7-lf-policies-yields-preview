@@ -220,9 +220,10 @@ function applyYieldsForSubject(context, subject, modifier) {
             for (const city of player.Cities.getCities()) {
                 const routes = city.Trade.routes;
                 for (const route of routes) {
-                    // Count only routes outgoing from the player (player on the right side: the
-                    // route name "Commercio da <right>" identifies the right city as the source).
+                    // Count only routes INCOMING to the player (player on the right side: the
+                    // route identifies the right city as the destination).
                     if (route.rightCityID?.owner !== player.id) continue;
+                    
                     const otherPlayerID = route.leftCityID?.owner;
                     if (!otherPlayerID || otherPlayerID === player.id) continue;
                     if (!player.Diplomacy?.hasAllied(otherPlayerID)) continue;
