@@ -209,24 +209,22 @@ function applyYieldsForSubject(context, subject, modifier) {
             const player = subject.player;
 
             let totalRoutesGold = 0;
-            for (const city of _cities) {
+            for (const city of player.Cities.getCities()) {
                 const routes = city.Trade.routes;
-                console.warn(`[ALLIANCE_TRADE] ${_modId}   city="${city.name}" cityId={owner:${city.owner},id:${city.id?.id}} routes=${routes.length}`);
                 for (const route of routes) {
-                    const _l = route.leftCityID;
-                    const _r = route.rightCityID;
-                    // Check if owned by us (player)
-                    if (route.leftCityID.owner !== player.id) {
+                    // Check if the route is incoming to us (player on right side):
+                    // the route's Trade Income is collected by the importing side.
+                    if (route.rightCityID.owner !== player.id) {
                         continue;
                     }
 
-                    const otherPlayerID = route.rightCityID.owner;
+                    const otherPlayerID = route.leftCityID.owner;
 
                     // Check if allied
                     if (!otherPlayerID || otherPlayerID === player.id || !player.Diplomacy?.hasAllied(otherPlayerID)) {
                         continue;
                     }
-                    
+
                     const routeYieldOfGold = Game.Trade.calculateTradeRouteExportYield(route.id, "YIELD_GOLD");
                     totalRoutesGold += routeYieldOfGold;
                 }
