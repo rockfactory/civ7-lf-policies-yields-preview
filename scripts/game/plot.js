@@ -117,6 +117,9 @@ export function hasPlotConstructibleByArguments(location, args) {
             const tags = PolicyYieldsCache.getTypeTags(c.constructibleType.ConstructibleType);
             return tags.has(args.Tag.Value);
         }
+        if (args.Age?.Value) {
+            return c.constructibleType.Age === args.Age.Value;
+        }
 
         throw new Error(`Unhandled hasPlotConstructibleByArguments: ${JSON.stringify(args)}`);
     });
