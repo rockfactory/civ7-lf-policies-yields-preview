@@ -564,9 +564,16 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_PRODUCTION": return;
 
         case "EFFECT_CITY_ADJUST_TRADE_YIELD": {
-            // Hard to find trade yields. Seems a bug in `city.Yields.getTradeYields()`
+            // Trade yield is always YIELD_GOLD (the gold component of trade-route income) —
+            // implicit in the effect's semantics and confirmed empirically: every observed
+            // modifier in Base + DLC (TARIFFS, PORT_OF_NATIONS_I/II, MOD_ATTRIBUTE_ECONOMIC_LEGEND_*_L*_02
+            // across base, napoleon, friedrich-xerxes-alt, edward-teach) supplies only `Percent` + `Tooltip`,
+            // never a `YieldType`. So we deposit the bonus directly to YIELD_GOLD; calling
+            // `context.addYieldsAmount(modifier, ...)` was wrong because that helper reads
+            // `modifier.Arguments.YieldType.Value` and warned "Modifier X is missing a YieldType argument".
             assertSubjectCity(subject);
-            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            if (subject.isEmpty) return context.addYieldTypeAmount("YIELD_GOLD", 0);
+
             let tradeYield = PolicyYieldsCache.getCityTradeYields(subject.city);
             if (tradeYield == null) {
                 console.error(`TradeYield not found for city ${subject.city.name}`);
@@ -574,7 +581,7 @@ function applyYieldsForSubject(context, subject, modifier) {
             }
 
             const percent = Number(modifier.Arguments.getAsserted('Percent'));
-            return context.addYieldsAmount(modifier, tradeYield * percent / 100);
+            return context.addYieldTypeAmount("YIELD_GOLD", tradeYield * percent / 100);
         }
 
         // City (Workers)
