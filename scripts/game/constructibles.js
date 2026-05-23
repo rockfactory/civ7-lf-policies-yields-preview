@@ -12,9 +12,9 @@ export function getPlayerBuildingsCountForModifier(player, modifier) {
 
 
 /**
- * 
- * @param {City[]} cities 
- * @param {ResolvedModifier} modifier 
+ *
+ * @param {City[]} cities
+ * @param {ResolvedModifier} modifier
  */
 export function getBuildingsCountForModifier(cities, modifier) {
     if (modifier.Arguments.Tag?.Value) {
@@ -26,8 +26,34 @@ export function getBuildingsCountForModifier(cities, modifier) {
     else if (modifier.Arguments.ConstructibleClass?.Value) {
         return getBuildingsByClass(cities, modifier.Arguments.ConstructibleClass.Value).length;
     }
-    
-    throw new Error(`${modifier.Modifier.ModifierId}: getBuildingsCountForModifier Unhandled ModifierArgument: ${JSON.stringify(modifier.Arguments)}`);    
+
+    throw new Error(`${modifier.Modifier.ModifierId}: getBuildingsCountForModifier Unhandled ModifierArgument: ${JSON.stringify(modifier.Arguments)}`);
+}
+
+/**
+ * Return ConstructibleType names of matching buildings (with duplicates, one per instance).
+ * Needed by callers that have to query per-instance data (e.g. Constructible_YieldChanges base yields).
+ * @param {City[]} cities
+ * @param {ResolvedModifier} modifier
+ * @returns {string[]}
+ */
+export function getBuildingTypesForModifier(cities, modifier) {
+    /** @param {ConstructibleInstance} instance */
+    const toType = (instance) => GameInfo.Constructibles.lookup(instance.type)?.ConstructibleType;
+    if (modifier.Arguments.Tag?.Value) {
+        return getBuildingsByTag(cities, modifier.Arguments.Tag.Value).map(toType).filter(t => t != null);
+    }
+    if (modifier.Arguments.ConstructibleType?.Value) {
+        const typeName = modifier.Arguments.ConstructibleType.Value;
+        const count = getBuildingsCountByType(cities, typeName);
+        return new Array(count).fill(typeName);
+    }
+    if (modifier.Arguments.ConstructibleClass?.Value) {
+        return getBuildingsByClass(cities, modifier.Arguments.ConstructibleClass.Value)
+            .map(({ constructibleType }) => constructibleType?.ConstructibleType)
+            .filter(t => t != null);
+    }
+    throw new Error(`${modifier.Modifier.ModifierId}: getBuildingTypesForModifier Unhandled ModifierArgument: ${JSON.stringify(modifier.Arguments)}`);
 }
 
 /**

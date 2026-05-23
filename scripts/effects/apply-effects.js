@@ -1,6 +1,6 @@
 import { resolveModifierById } from "../modifiers.js";
 import { addYieldsAmount, addYieldsPercentForCitySubject, addYieldTypeAmount, addYieldTypeAmountNoMultiplier } from "./yields.js";
-import { computeConstructibleMaintenanceEfficiencyReduction, findCityConstructibles, findCityConstructiblesMatchingAdjacency, getBuildingsCountForModifier, getPlayerBuildingsCountForModifier } from "../game/constructibles.js";
+import { computeConstructibleMaintenanceEfficiencyReduction, findCityConstructibles, findCityConstructiblesMatchingAdjacency, getBuildingsCountForModifier, getBuildingTypesForModifier, getPlayerBuildingsCountForModifier } from "../game/constructibles.js";
 import { getYieldsForAdjacency, getPlotsGrantingAdjacency, AdjancenciesCache } from "../game/adjacency.js";
 import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyCommanders } from "../game/units.js";
 import { getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
@@ -528,6 +528,23 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_YIELD": {
             assertSubjectCity(subject);
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+
+            // Variants:
+            //   - Amount + Tag/ConstructibleType/ConstructibleClass + YieldType (DEVAKOSHTA, PERSIA, ...)
+            //   - Percent (e.g. 100 = double) + Tag + YieldType (MO_ATTRIBUTE_ECONOMIC_01, MO_DIPLOMATIC_01).
+            // For Percent we multiply each matching building's BASE yield (Constructible_YieldChanges)
+            // by Percent/100 — this excludes adjacency/civ bonuses but matches what the engine doubles.
+            if (modifier.Arguments.Percent?.Value != null) {
+                const percentFactor = Number(modifier.Arguments.Percent.Value) / 100;
+                const yieldTypes = parseArgumentsArray(modifier.Arguments, 'YieldType');
+                const buildingTypes = getBuildingTypesForModifier([subject.city], modifier);
+                buildingTypes.forEach(constructibleType => {
+                    GameInfo.Constructible_YieldChanges
+                        .filter(yc => yc.ConstructibleType === constructibleType && yieldTypes.includes(yc.YieldType))
+                        .forEach(yc => context.addYieldTypeAmount(yc.YieldType, yc.YieldChange * percentFactor));
+                });
+                return;
+            }
 
             const buildingsCount = getBuildingsCountForModifier([subject.city], modifier);
             return context.addYieldsAmountTimes(modifier, buildingsCount);
