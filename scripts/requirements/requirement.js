@@ -468,8 +468,10 @@ export function isRequirementSatisfied(player, subject, requirement) {
         case "REQUIREMENT_PLOT_ADJACENT_FRIENDLY_UNIT_TAG_MATCHES": // combat (GARDE_IMPERIALE, KSHATRIYA)
         // Gating for one-time triggered effects we already ignore (EFFECT_CITY_GRANT_YIELD on capture)
         case "REQUIREMENT_PLAYER_FIRST_TIME_SETTLEMENT_OCCUPATION":
-        // Triggered events: only gate one-shot effects (EFFECT_CITY_GRANT_UNIT for BUZZARD_CULT)
+        // Triggered events: only gate one-shot effects (EFFECT_CITY_GRANT_UNIT for BUZZARD_CULT,
+        // EFFECT_PLAYER_GRANT_YIELD on district-defense destruction for SIEGE_TRAIN).
         case "REQUIREMENT_PLAYER_MAKES_PEACE_IMMEDIATE":
+        case "REQUIREMENT_PLAYER_UNIT_DESTROYS_DISTRICT_DEFENSES_TRIGGER":
         // Narrative-only (Gilgamesh DLC narrative-stories-gameeffects-modern.xml)
         case "REQUIREMENT_PLAYER_HAS_X_ALLIANCES": {
             return false;

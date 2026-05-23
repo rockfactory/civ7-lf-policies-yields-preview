@@ -821,6 +821,28 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_ADJUST_UNIT_TRADE_ROUTE_COMBAT_MODIFIER":
         case "EFFECT_UNIT_ADJUST_IGNORE_MOVEMENT_OBSTACLE":
         case "EFFECT_ADJUST_UNIT_SUZERAIN_OF_COMBAT_MODIFIER":
+        case "EFFECT_ADJUST_UNIT_UNDER_SETTLEMENT_CAP_COMBAT_MODIFIER":     // QULLARAQASI
+        case "EFFECT_ADJUST_UNIT_POST_COMBAT_HEAL":                         // KARA_II
+        case "EFFECT_ADJUST_UNIT_ATTACK_CREATES_PLOT_EFFECT":               // MISSISSIPPIAN_SYNCRETISM
+        case "EFFECT_UNIT_ADJUST_NATURAL_WONDER_COMBAT_BONUS":              // ICELAND_SYNCRETISM
+        case "EFFECT_UNIT_ADJUST_FORTIFICATION_CONSTRUCTION_TIME":          // TUNDIKHEL
+        case "EFFECT_ADJUST_UNIT_ADVANCED_PILLAGING":                       // STRANDHOGG (range pillage)
+        case "EFFECT_ADJUST_UNIT_ATTACK_RANGE":                             // QUINQUEREME_II
+        // Pillage/Raid yields are triggered on action, not steady-state previewable
+        case "EFFECT_ADJUST_UNIT_PERCENT_PILLAGE_BUILDING_MODIFIER":        // SCORCHED_EARTH
+        case "EFFECT_ADJUST_UNIT_PERCENT_PILLAGE_IMPROVEMENT_MODIFIER":     // STRATAGEMS
+        case "EFFECT_ADJUST_UNIT_BUILDING_PILLAGE_YIELD_MODIFIER":          // FALSE_RETREAT
+        case "EFFECT_ADJUST_UNIT_PLUNDER_YIELDS":                           // BLACK_FLAG_II
+        case "EFFECT_ADJUST_UNIT_COASTAL_RAID_YIELD_MODIFIER":              // DROTTKVAETT_II
+        // Non-yield city modifiers
+        case "EFFECT_CITY_ADJUST_GREAT_WORK_SLOTS":                         // BON_OM_TOUK (slot, no recurring yield)
+        case "EFFECT_CITY_GRANT_FREE_PURCHASE_CHARGE":                      // BAYEUX_TAPESTRY_II (one-shot)
+        case "EFFECT_ADJUST_CITY_REPAIR_PURCHASE_EFFICIENCY":               // REIDI_GUDANNA (purchase price)
+        // Production %/build-time modifiers (coherent with the others already in this group)
+        case "EFFECT_CITY_ADJUST_PROJECT_PRODUCTION_PER_COMPLETED_MASTERY": // MO_SCIENTIFIC_01
+        case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_PRODUCTION_PER_MASTERY":     // AQ_SCIENTIFIC_01
+        // Diplomacy
+        case "EFFECT_PLAYER_RESET_RELATIONSHIP_ON_PEACE":                   // ATASSA (BUZZARD_CULT)
         // Belief yields are scoped to the Belief Picker UI (not decorated by this mod),
         // age-transition bonuses, and narrative events — none of which are previewed here.
         case "EFFECT_ADD_RELIGIOUS_BELIEF_YIELD":
