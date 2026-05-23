@@ -6,7 +6,7 @@ import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyC
 import { getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
 import { computeUnitMaintenanceYieldDelta, computeWorkerMaintenanceYieldDelta, parseArgumentsArray } from "../game/helpers.js";
 import { resolveSubjectsWithRequirements } from "../requirements/resolve-subjects.js";
-import { countPlayerResourcesByClass, countPlayerResourcesByType, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier } from "../game/player.js";
+import { countPlayerResourcesByClass, countPlayerResourcesByType, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier, getPlayerUnlockedProgressionTreeNodes } from "../game/player.js";
 import { findCityConstructiblesMatchingWarehouse, getYieldsForWarehouseChange } from "../game/warehouse.js";
 import { PolicyYieldsContext } from "../core/execution-context.js";
 import { assertSubjectCity, assertSubjectConstructible, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "../requirements/assert-subject.js";
@@ -209,9 +209,12 @@ function applyYieldsForSubject(context, subject, modifier) {
             const player = subject.player;
 
             let totalRoutesGold = 0;
-            for (const city of player.Cities.getCities()) {
+            for (const city of _cities) {
                 const routes = city.Trade.routes;
+                console.warn(`[ALLIANCE_TRADE] ${_modId}   city="${city.name}" cityId={owner:${city.owner},id:${city.id?.id}} routes=${routes.length}`);
                 for (const route of routes) {
+                    const _l = route.leftCityID;
+                    const _r = route.rightCityID;
                     // Check if owned by us (player)
                     if (route.leftCityID.owner !== player.id) {
                         continue;
@@ -524,6 +527,13 @@ function applyYieldsForSubject(context, subject, modifier) {
             assertSubjectCity(subject);
             const greatWorks = subject.isEmpty ? 0 : getCityGreatWorksCount(subject.city);
             return context.addYieldsAmountTimes(modifier, greatWorks);
+        }
+
+        case "EFFECT_CITY_ADJUST_YIELD_PER_UNLOCKED_PROGRESSION_TREE_NODE": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const unlockedNodes = getPlayerUnlockedProgressionTreeNodes(player, modifier);
+            return context.addYieldsAmountTimes(modifier, unlockedNodes);
         }
 
         case "EFFECT_CITY_ADJUST_YIELD_PER_POPULATION": {

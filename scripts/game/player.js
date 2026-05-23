@@ -197,6 +197,30 @@ export function getPlayerCompletedMasteries(player, modifier) {
 }
 
 /**
+ * Count of "unlocked" nodes in the player's progression tree, used by
+ * EFFECT_CITY_ADJUST_YIELD_PER_UNLOCKED_PROGRESSION_TREE_NODE (DURANI,
+ * DURANI_II, ADA_LOVELACE). All in-game tooltips referencing this effect
+ * describe the count as "Mastery completed" — depth 2 nodes (see
+ * ProgressionResearchedNode in types/engine.d.ts: "1 = normal, 2 = mastery").
+ * Kept separate from getPlayerCompletedMasteries because the EffectType
+ * differs and the engine may eventually diverge.
+ * @param {Player} player
+ * @param {ResolvedModifier} modifier
+ */
+export function getPlayerUnlockedProgressionTreeNodes(player, modifier) {
+    /** @type {ProgressionResearchedNode[]} */
+    let nodes = [];
+
+    switch (modifier.Arguments.SystemType?.Value) {
+        case "SYSTEM_TECH": nodes = player.Techs.getResearched(); break;
+        case "SYSTEM_CULTURE": nodes = player.Culture.getResearched(); break;
+        default: throw new Error(`${modifier.Modifier.ModifierId}: getPlayerUnlockedProgressionTreeNodes Unsupported SystemType: ${modifier.Arguments.SystemType?.Value}`);
+    }
+
+    return nodes.filter(node => node.depth >= 2).length;
+}
+
+/**
  * @param {Player} player
  * @param {ResolvedModifier} modifier
  */
