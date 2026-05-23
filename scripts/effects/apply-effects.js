@@ -212,13 +212,16 @@ function applyYieldsForSubject(context, subject, modifier) {
             for (const city of player.Cities.getCities()) {
                 const routes = city.Trade.routes;
                 for (const route of routes) {
-                    // Check if the route is incoming to us (player on right side):
-                    // the route's Trade Income is collected by the importing side.
-                    if (route.rightCityID.owner !== player.id) {
+                    // The tradition grants the yield "to both players" of an allied route,
+                    // so count routes regardless of which side the player is on.
+                    let otherPlayerID;
+                    if (route.leftCityID.owner === player.id) {
+                        otherPlayerID = route.rightCityID.owner;
+                    } else if (route.rightCityID.owner === player.id) {
+                        otherPlayerID = route.leftCityID.owner;
+                    } else {
                         continue;
                     }
-
-                    const otherPlayerID = route.leftCityID.owner;
 
                     // Check if allied
                     if (!otherPlayerID || otherPlayerID === player.id || !player.Diplomacy?.hasAllied(otherPlayerID)) {
