@@ -465,6 +465,66 @@ function applyYieldsForSubject(context, subject, modifier) {
             return;
         }
 
+        // Maintenance modifier filtered by ConstructibleType Tag, with STANDARD convention:
+        //   - Percent (e.g. -100 in AQ_DIPLOMATIC_01_HAPPINESS) = % cost change (negative = discount)
+        //   - Amount (e.g. 1,1 in Nepal MOD_EXPENSIVE_WAREHOUSE_BUILDINGS) = flat per-yield cost INCREASE
+        // (NOTE: this is the OPPOSITE sign convention of EFFECT_CITY_ADJUST_BUILDING_MAINTENANCE_EFFICIENCY,
+        //  where positive Amount = cost reduction. See scripts/game/helpers.js header for that family.)
+        //
+        // TODO This should be tested more
+        case "EFFECT_CITY_ADJUST_SPECIFIC_CONSTRUCTIBLE_MAINTENANCE": {
+            assertSubjectCity(subject);
+            const tag = modifier.Arguments.Tag?.Value;
+            if (!tag) {
+                throw new Error(`${modifier.Modifier.ModifierId}: ${modifier.EffectType} requires Tag: ${JSON.stringify(modifier.Arguments)}`);
+            }
+            const yieldTypes = parseArgumentsArray(modifier.Arguments, 'YieldType');
+            const hasPercent = modifier.Arguments.Percent?.Value != null;
+            const hasAmount = modifier.Arguments.Amount?.Value != null;
+            if (!hasPercent && !hasAmount) {
+                throw new Error(`${modifier.Modifier.ModifierId}: ${modifier.EffectType} requires Percent or Amount: ${JSON.stringify(modifier.Arguments)}`);
+            }
+
+            if (subject.isEmpty) {
+                yieldTypes.forEach(yt => addYieldTypeAmountNoMultiplier(context.delta, yt, 0));
+                return;
+            }
+
+            const tagged = findCityConstructibles(subject.city).filter(({ constructibleType }) =>
+                constructibleType && PolicyYieldsCache.hasTypeTag(constructibleType.ConstructibleType, tag)
+            );
+
+            const deltaByYield = Object.fromEntries(yieldTypes.map(t => [t, 0]));
+
+            if (hasPercent) {
+                const percentFactor = Number(modifier.Arguments.Percent.Value) / 100;
+                // Player bonus = -cost * percentFactor. For Percent=-100 → +cost (full refund).
+                tagged.forEach(({ constructibleType }) => {
+                    if (!constructibleType) return;
+                    const maintenances = subject.city.Constructibles.getMaintenance(constructibleType.ConstructibleType);
+                    for (const index in maintenances) {
+                        const cost = maintenances[index] || 0;
+                        if (cost === 0) continue;
+                        const yieldType = GameInfo.Yields[index]?.YieldType;
+                        if (!yieldType || !yieldTypes.includes(yieldType)) continue;
+                        deltaByYield[yieldType] += -cost * percentFactor;
+                    }
+                });
+            } else {
+                // Amount is positional (matches YieldType order); fall back to amountsArr[0] for safety.
+                const amountsArr = parseArgumentsArray(modifier.Arguments, 'Amount').map(Number);
+                tagged.forEach(() => {
+                    yieldTypes.forEach((yt, idx) => {
+                        const amt = amountsArr[idx] ?? amountsArr[0] ?? 0;
+                        deltaByYield[yt] += -amt;
+                    });
+                });
+            }
+
+            yieldTypes.forEach(yt => addYieldTypeAmountNoMultiplier(context.delta, yt, deltaByYield[yt]));
+            return;
+        }
+
         case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_YIELD": {
             assertSubjectCity(subject);
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
