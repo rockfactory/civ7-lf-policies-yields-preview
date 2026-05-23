@@ -253,6 +253,12 @@ declare interface ConstructibleYieldChange {
   YieldChange: number;
 }
 
+declare interface ConstructibleMaintenance {
+  ConstructibleType: string;
+  YieldType: string;
+  Amount: number;
+}
+
 /**
  * Represents a Unit in the game.
  * @property {string} UnitType - Unique identifier for the unit (PK)
@@ -819,6 +825,7 @@ declare interface IGameInfo {
   Constructible_Adjacencies: GameInfoArray<ConstructibleAdjacency>;
   Constructible_WildcardAdjacencies: GameInfoArray<ConstructibleWildcardAdjacency>;
   Constructible_YieldChanges: GameInfoArray<ConstructibleYieldChange>;
+  Constructible_Maintenances: GameInfoArray<ConstructibleMaintenance>;
   Warehouse_YieldChanges: GameInfoArray<WarehouseYieldChange>;
   Constructible_WarehouseYields: GameInfoArray<ConstructibleWarehouseYield>;
   Constructible_WildcardWarehouseYields: GameInfoArray<ConstructibleWildcardWarehouseYield>;

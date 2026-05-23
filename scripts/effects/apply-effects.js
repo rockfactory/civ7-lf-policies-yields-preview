@@ -1,6 +1,6 @@
 import { resolveModifierById } from "../modifiers.js";
 import { addYieldsAmount, addYieldsPercentForCitySubject, addYieldTypeAmount, addYieldTypeAmountNoMultiplier } from "./yields.js";
-import { computeConstructibleMaintenanceEfficiencyReduction, findCityConstructibles, findCityConstructiblesMatchingAdjacency, getBuildingsCountForModifier, getBuildingTypesForModifier, getPlayerBuildingsCountForModifier } from "../game/constructibles.js";
+import { computeConstructibleMaintenanceEfficiencyReduction, findCityConstructibles, findCityConstructiblesMatchingAdjacency, getBaseConstructibleMaintenance, getBuildingsCountForModifier, getBuildingTypesForModifier, getPlayerBuildingsCountForModifier } from "../game/constructibles.js";
 import { getYieldsForAdjacency, getPlotsGrantingAdjacency, AdjancenciesCache } from "../game/adjacency.js";
 import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyCommanders } from "../game/units.js";
 import { getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
@@ -508,14 +508,16 @@ function applyYieldsForSubject(context, subject, modifier) {
             if (hasPercent) {
                 const percentFactor = Number(modifier.Arguments.Percent.Value) / 100;
                 // Player bonus = -cost * percentFactor. For Percent=-100 → +cost (full refund).
+                // Read BASE maintenance (not city.Constructibles.getMaintenance), otherwise the
+                // preview collapses to +0 the moment the tradition is applied: the engine has
+                // already zeroed the maintenance on tagged buildings, so -cost*factor = 0
+                // (regression seen on Classe Sacerdotale / AQ_DIPLOMATIC_01_HAPPINESS).
                 tagged.forEach(({ constructibleType }) => {
                     if (!constructibleType) return;
-                    const maintenances = subject.city.Constructibles.getMaintenance(constructibleType.ConstructibleType);
-                    for (const index in maintenances) {
-                        const cost = maintenances[index] || 0;
+                    const baseMaintenances = getBaseConstructibleMaintenance(constructibleType.ConstructibleType);
+                    for (const yieldType of yieldTypes) {
+                        const cost = baseMaintenances[yieldType] || 0;
                         if (cost === 0) continue;
-                        const yieldType = GameInfo.Yields[index]?.YieldType;
-                        if (!yieldType || !yieldTypes.includes(yieldType)) continue;
                         deltaByYield[yieldType] += -cost * percentFactor;
                     }
                 });
@@ -891,6 +893,8 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_DIPLOMACY_ADJUST_DIPLOMATIC_ACTION_TYPE_EFFICIENCY_PER_GREAT_WORK":
         case "EFFECT_DIPLOMACY_AGENDA_TIMED_UPDATE":
         case "EFFECT_DISTRICT_ADJUST_FORTIFIED_COMBAT_STRENGTH":
+        case "EFFECT_DISTRICT_ADJUST_TOTAL_HEALTH": // NORMAN_SYNCRETISM_MOD_WALL_HEALTH, MOD_RED_FORT_*, narrative wall-HP buffs
+        case "EFFECT_TRADE_ROUTE_SET_TRADE_ROUTE_PROTECTED": // TANKWA, AKSUM_SYNCRETISM_EXPLORATION, BYRSA, TRADE_UNIT_NAVIGABLE_RIVER — route pillage immunity
         case "EFFECT_PLAYER_ADJUST_SETTLEMENT_CAP":
         case "EFFECT_CITY_ADJUST_RESOURCE_CAP":
         case "EFFECT_CITY_ADJUST_TRADE_ROUTE_RANGE":

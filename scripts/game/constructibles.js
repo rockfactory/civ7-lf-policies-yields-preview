@@ -128,6 +128,31 @@ export function findCityConstructibles(city) {
 // MAINTENANCE REDUCTION
 
 /**
+ * Base per-yield maintenance for a constructible from the static
+ * `GameInfo.Constructible_Maintenances` table — i.e. the cost the engine
+ * would charge BEFORE any modifiers refund/inflate it.
+ *
+ * Use this (not `city.Constructibles.getMaintenance(...)`) when the preview
+ * needs the contribution of the modifier being previewed: once that modifier
+ * is applied, `getMaintenance` returns the post-refund cost and a formula
+ * like `-cost * percentFactor` collapses to 0 (the "Classe Sacerdotale shows
+ * +0 +0 after apply" bug).
+ *
+ * @param {string} constructibleType
+ * @returns {Record<string, number>} YieldType → base cost (positive)
+ */
+export function getBaseConstructibleMaintenance(constructibleType) {
+    /** @type {Record<string, number>} */
+    const result = {};
+    for (const m of GameInfo.Constructible_Maintenances) {
+        if (m.ConstructibleType !== constructibleType) continue;
+        if (!m.Amount) continue;
+        result[m.YieldType] = (result[m.YieldType] || 0) + m.Amount;
+    }
+    return result;
+}
+
+/**
  * @param {City} city
  * @param {ConstructibleInstance} constructible
  * @param {Constructible} constructibleType
