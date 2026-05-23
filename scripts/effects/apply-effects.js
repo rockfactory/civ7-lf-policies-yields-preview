@@ -6,7 +6,7 @@ import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyC
 import { getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
 import { computeUnitMaintenanceYieldDelta, computeWorkerMaintenanceYieldDelta, parseArgumentsArray } from "../game/helpers.js";
 import { resolveSubjectsWithRequirements } from "../requirements/resolve-subjects.js";
-import { countPlayerResourcesByClass, countPlayerResourcesByType, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier, getPlayerUnlockedProgressionTreeNodes } from "../game/player.js";
+import { countPlayerResourcesByClass, countPlayerResourcesByType, countPlayerTradeRoutesToCityStates, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier, getPlayerUnlockedProgressionTreeNodes } from "../game/player.js";
 import { findCityConstructiblesMatchingWarehouse, getYieldsForWarehouseChange } from "../game/warehouse.js";
 import { PolicyYieldsContext } from "../core/execution-context.js";
 import { assertSubjectCity, assertSubjectConstructible, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "../requirements/assert-subject.js";
@@ -584,6 +584,15 @@ function applyYieldsForSubject(context, subject, modifier) {
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
             const resourceClassType = modifier.Arguments.getAsserted('ResourceClassType');
             const count = countPlayerResourcesByClass(player, resourceClassType);
+            return context.addYieldsAmountTimes(modifier, count);
+        }
+
+        // Per-city yield scaled by the number of player's outgoing trade routes to city-states.
+        // Observed only with YieldType + Amount (TONGA_SYNCRETISM I/II, QUARTER_TOFI_A).
+        case "EFFECT_CITY_ADJUST_YIELD_PER_CITY_STATE_TRADE_ROUTE": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const count = countPlayerTradeRoutesToCityStates(player);
             return context.addYieldsAmountTimes(modifier, count);
         }
 

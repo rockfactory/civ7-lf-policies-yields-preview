@@ -221,6 +221,28 @@ export function getPlayerUnlockedProgressionTreeNodes(player, modifier) {
 }
 
 /**
+ * Count the player's outgoing trade routes whose destination city is owned by a minor
+ * (city-state) player. Used by EFFECT_CITY_ADJUST_YIELD_PER_CITY_STATE_TRADE_ROUTE
+ * (TONGA_SYNCRETISM, QUARTER_TOFI_A).
+ * @param {Player} player
+ */
+export function countPlayerTradeRoutesToCityStates(player) {
+    let count = 0;
+    for (const city of player.Cities.getCities()) {
+        const routes = city.Trade?.routes ?? [];
+        for (const route of routes) {
+            if (route.leftCityID.owner !== player.id) continue;
+            const otherId = route.rightCityID.owner;
+            if (otherId == null || otherId === player.id) continue;
+            const otherPlayer = Players.get(otherId);
+            if (!otherPlayer?.isMinor) continue;
+            count++;
+        }
+    }
+    return count;
+}
+
+/**
  * Group player's outgoing trade routes by the other player they go to, and return the maximum count.
  * Used by `REQUIREMENT_PLAYER_HAS_X_TRADE_ROUTES_WITH_PLAYER {AllPlayers=true}`: the requirement is
  * satisfied if AT LEAST ONE other player has ≥ Amount routes from us (OR semantics across players).
