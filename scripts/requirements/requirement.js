@@ -399,6 +399,13 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return hasUnitTag(subject.unit, requirement.Arguments.getAsserted('Tag'));
         }
 
+        case "REQUIREMENT_UNIT_TYPE_MATCHES": {
+            if (subject.type !== 'Unit') return false;
+            const unitTypeInfo = GameInfo.Units.lookup(subject.unit.type);
+            if (!unitTypeInfo) return false;
+            return unitTypeInfo.UnitType === requirement.Arguments.getAsserted('UnitType');
+        }
+
         case "REQUIREMENT_UNIT_IS_IN_HOMELANDS": {
             assertSubjectUnit(subject);
             return !player.isDistantLands(subject.unit.location);
