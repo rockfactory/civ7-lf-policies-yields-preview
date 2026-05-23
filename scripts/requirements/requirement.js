@@ -463,6 +463,17 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return civilizationTraits.has(requiredTrait) || leaderTraits.has(requiredTrait);            
         }
 
+        case "REQUIREMENT_PLAYER_HAS_FEWEST_SETTLEMENTS": {
+            assertSubjectPlayer(subject);
+            // Single observed variant in Base + DLC (Nepal MAITRI_SANDHI uses 4 inline copies,
+            // both bare and inverse): satisfied when no other major has STRICTLY fewer settlements.
+            // Ties at the minimum still count as "fewest".
+            const ours = subject.player.Stats.numSettlements;
+            return Players.getAlive().every(other =>
+                !other.isMajor || other.id === subject.player.id || other.Stats.numSettlements >= ours
+            );
+        }
+
         case "REQUIREMENT_PLAYER_HAS_X_SETTLEMENTS": {
             assertSubjectPlayer(subject);
             let totalSettlements = 0;
