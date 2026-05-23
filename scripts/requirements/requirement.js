@@ -1,5 +1,5 @@
 import { hasUnitTag, isUnitTypeInfoTargetOfArguments } from "../game/units.js";
-import { getCityGreatWorksCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
+import { getCityGreatWorksCount, getCitySpecialistsCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
 import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType, getAppealThresholdFromArgs } from "../game/plot.js";
 import { getMaxTradeRoutesPerOtherPlayer, getPlayerCityStatesSuzerain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
 import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "./assert-subject.js";
@@ -67,10 +67,25 @@ export function isRequirementSatisfied(player, subject, requirement) {
         }
         case "REQUIREMENT_CITY_POPULATION": {
             assertSubjectCity(subject);
-            if (requirement.Arguments.MinUrbanPopulation?.Value) {
-                return subject.city.urbanPopulation >= Number(requirement.Arguments.MinUrbanPopulation.Value);
+            // Variants observed across Base + DLC:
+            //   - MinUrbanPopulation  (civilizations-gameeffects, project gating)
+            //   - MinRuralPopulation  (genghis-khan narratives)
+            //   - MinTotalPopulation  (great-britain / nepal / lakshmibai / metaprogression narratives)
+            //   - MinWorkerPopulation (SALES_AND_TRADE_II = specialists assigned at urban tiles)
+            const args = requirement.Arguments;
+            if (args.MinUrbanPopulation?.Value) {
+                return subject.city.urbanPopulation >= Number(args.MinUrbanPopulation.Value);
             }
-            throw new Error(`Unhandled RequirementType: ${requirement.Requirement.RequirementType} with Arguments: ${JSON.stringify(requirement.Arguments)}`);            
+            if (args.MinRuralPopulation?.Value) {
+                return subject.city.ruralPopulation >= Number(args.MinRuralPopulation.Value);
+            }
+            if (args.MinTotalPopulation?.Value) {
+                return subject.city.population >= Number(args.MinTotalPopulation.Value);
+            }
+            if (args.MinWorkerPopulation?.Value) {
+                return getCitySpecialistsCount(subject.city) >= Number(args.MinWorkerPopulation.Value);
+            }
+            throw new Error(`Unhandled RequirementType: ${requirement.Requirement.RequirementType} with Arguments: ${JSON.stringify(args)}`);
         }
 
         case "REQUIREMENT_CITY_HAS_X_OPEN_RESOURCE_SLOTS": {
