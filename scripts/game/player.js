@@ -246,6 +246,23 @@ export function countPlayerTradeRoutesToCityStates(player) {
 }
 
 /**
+ * Resolve a trade route's domain. `TradeRouteInstance` from `city.Trade.routes` does NOT expose
+ * a `.domain` field (verified empirically — only the "thin" id/name/cityIDs/payloads are present).
+ * The richer view is `player.Trade.getCurrentTradeRoutes()`, which returns the same routes with
+ * `.domain` exposed; we match by `route.id` (a primitive number, shared across both views).
+ * @param {Player} player
+ * @param {TradeRouteInstance} route
+ * @returns {number} Numeric DomainType id (compare against `DomainType.DOMAIN_SEA`, etc.).
+ */
+export function getTradeRouteDomain(player, route) {
+    const current = player.Trade?.getCurrentTradeRoutes() ?? [];
+    for (const r of current) {
+        if (r.id === route.id) return r.domain;
+    }
+    throw new Error(`getTradeRouteDomain: route ${route.id} (${route.name}) not found in player.Trade.getCurrentTradeRoutes()`);
+}
+
+/**
  * Group player's outgoing trade routes by the other player they go to, and return the maximum count.
  * Used by `REQUIREMENT_PLAYER_HAS_X_TRADE_ROUTES_WITH_PLAYER {AllPlayers=true}`: the requirement is
  * satisfied if AT LEAST ONE other player has ≥ Amount routes from us (OR semantics across players).

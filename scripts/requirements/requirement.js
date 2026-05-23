@@ -1,8 +1,8 @@
 import { hasUnitTag, isUnitTypeInfoTargetOfArguments } from "../game/units.js";
 import { getCityGreatWorksCount, getCitySpecialistsCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
 import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType, getAppealThresholdFromArgs } from "../game/plot.js";
-import { getMaxTradeRoutesPerOtherPlayer, getPlayerCityStatesSuzerain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
-import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "./assert-subject.js";
+import { getMaxTradeRoutesPerOtherPlayer, getPlayerCityStatesSuzerain, getTradeRouteDomain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
+import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectTradeRoute, assertSubjectUnit } from "./assert-subject.js";
 import { PolicyExecutionContext } from "../core/execution-context.js";
 import { PolicyYieldsCache } from "../cache.js";
 
@@ -560,6 +560,26 @@ export function isRequirementSatisfied(player, subject, requirement) {
                 return getMaxTradeRoutesPerOtherPlayer(subject.player) >= amount;
             }
             throw new Error(`${requirement.Requirement.RequirementType}: unhandled arguments: ${JSON.stringify(args)}`);
+        }
+
+        case "REQUIREMENT_TRADE_ROUTE_IS_DOMAIN": {
+            // Subject-level filter for routes emitted by COLLECTION_PLAYER_TRADE_ROUTES.
+            // Only DomainType is observed in Base + DLC XML (always DOMAIN_SEA, on
+            // MANDARIN_MOD_NAVAL_TRADE_ATTACH_HOMELANDS/DISTANT, AKSUM/TONGIAKI naval mods).
+            assertSubjectTradeRoute(subject);
+            const args = requirement.Arguments;
+            const domainTypeArg = args.DomainType?.Value;
+            if (!domainTypeArg) {
+                throw new Error(`REQUIREMENT_TRADE_ROUTE_IS_DOMAIN: unhandled arguments: ${JSON.stringify(args)}`);
+            }
+            // DomainType is a runtime global mapping name → numeric id (DOMAIN_SEA=0, DOMAIN_AIR=1, DOMAIN_LAND=2).
+            // Same pattern used in base-standard/ui-next/screens/commerce/commerce-screen-model.js (`route.domain === DomainType.DOMAIN_LAND`)
+            // and base-standard/ui/trade-route-chooser/trade-routes-model.js (`tradeRoute.domain === DomainType.DOMAIN_LAND`).
+            const expected = DomainType[domainTypeArg];
+            if (expected === undefined) {
+                throw new Error(`REQUIREMENT_TRADE_ROUTE_IS_DOMAIN: unknown DomainType ${domainTypeArg}`);
+            }
+            return getTradeRouteDomain(subject.player, subject.tradeRoute) === expected;
         }
 
         case "REQUIREMENT_PLAYER_IS_MAJOR": {

@@ -59,6 +59,101 @@ declare interface PlayerReligion {
     getPantheonType: () => number;
 }
 
+/**
+ * Player-scoped trade API. Members observed at runtime on the local player's `Trade`
+ * prototype (Object.getPrototypeOf(player.Trade)) — see `screen-policies-yields-decorator.js`
+ * diagnostic dump. Signatures inferred from Trade.ltp tuner panel and commerce-screen-model.js.
+ */
+declare interface PlayerTrade {
+    /** Returns a TradeRouteStatus code (numeric) — SUCCESS, AT_WAR, DISTANCE, OVER_OCEAN, NO_URBAN_SEA_ROUTE, NO_RESOURCES, NEED_MORE_FRIENDSHIP, ALREADY_EXISTS, ... */
+    canStartTradeRouteToCity(cityId: ID, domainType: number): number;
+    /** Number of trade routes currently terminating in the given city. */
+    countPlayerCityRoutes(cityId: ID): number;
+    /** Total current trade routes for this player (in + out). */
+    countPlayerTradeRoutes(): number;
+    /** Count of routes between this player and the given other player. */
+    countPlayerTradeRoutesTo(playerId: number): number;
+    /** Per-partner trade route capacity. */
+    getTradeCapacityFromPlayer(playerId: number): number;
+    /** Relationship gain (influence) from establishing a route with the given player. */
+    getPotentialRelationshipGainFromTradeRouteWith(playerId: number): number;
+    /** Find the city in our trade network closest to the given target. */
+    getNearestCityInTradeNetwork(targetCityId: ID): ID | null;
+    /**
+     * All trade routes currently incident to this player, with full per-route info
+     * (notably `.domain` — which `city.Trade.routes` / `TradeRouteInstance` lacks).
+     * Match against `TradeRouteInstance.id` (same numeric id space).
+     */
+    getCurrentTradeRoutes(): CurrentTradeRoute[];
+    /** Project all possible routes given a bitmask of `TradeRouteSearchOptions`. */
+    projectPossibleTradeRoutes(searchOptions?: number): ProjectedTradeRoute[];
+    /** Variant scoped to a subset of other players. */
+    projectPossibleTradeRoutesToPlayers(playerIds: number[], searchOptions?: number): ProjectedTradeRoute[];
+    /** Variant scoped to a subset of target cities. */
+    projectPossibleTradeRoutesToCities(cityIds: ID[], searchOptions?: number): ProjectedTradeRoute[];
+    /** Async variant of projectPossibleTradeRoutes. */
+    projectPossibleTradeRoutesAsync(searchOptions?: number): Promise<ProjectedTradeRoute[]>;
+}
+
+/**
+ * Output of `player.Trade.projectPossibleTradeRoutes()` — hypothetical/possible routes from
+ * a candidate trader's perspective. Has its own shape distinct from active `TradeRouteInstance`
+ * (e.g. uses `targetCityId`/`nearestCityId` instead of `leftCityID`/`rightCityID`).
+ */
+declare interface ProjectedTradeRoute {
+    /** Numeric DomainType id (0 = SEA, 1 = AIR, 2 = LAND). */
+    domain: number;
+    /** Bitmask / array of TradeRouteStatus codes. */
+    status: number[];
+    targetCityId: ID;
+    nearestCityId: ID;
+    importPayloads: unknown[];
+    exportYields?: { yieldType: number; amount: number }[];
+    pathPlots?: number[];
+}
+
+/**
+ * Game-scoped (global) trade API. Members observed at runtime on `Game.Trade`'s prototype
+ * (see screen-policies-yields-decorator.js diagnostic dump).
+ */
+declare interface GameTrade {
+    /** Sum of route export yield (e.g. `YIELD_GOLD`) for a single route. `routeId` is the primitive `TradeRouteInstance.id`. */
+    calculateTradeRouteExportYield(routeId: number, yieldType: string): number;
+    /** Lookup a single route by its primitive numeric id; returns the same thin shape as `city.Trade.routes`. */
+    findTradeRouteByID(routeId: number): TradeRouteInstance | null;
+    /** Find a route between two specific cities (if any). */
+    findTradeRouteBetween(cityIdA: ID, cityIdB: ID): TradeRouteInstance | null;
+    /** All current routes incident to a city (same thin shape as `city.Trade.routes`, no `.domain`). */
+    getCityRoutes(cityId: ID): TradeRouteInstance[];
+    /** Localization key / display name for a route. */
+    getTradeRouteName(routeId: number): string;
+    /** Hypothetical payloads if the route were established. */
+    projectTradeRoutePayloads(originCityId: ID, targetCityId: ID, domainType: number): unknown[];
+    /** Hypothetical path plot indices for a route. */
+    projectTradeRoutePathPlots(originCityId: ID, targetCityId: ID, domainType: number): number[];
+    /** Hypothetical export yields for a route. */
+    projectTradeRouteExportYields(originCityId: ID, targetCityId: ID, domainType: number): { yieldType: number; amount: number }[];
+    /** Trade graph edge IDs incident to a city (one per (domain, partner) pair) — used by the Trade tuner. */
+    getCityGraphEdges(cityId: ID): number[];
+    /** Resolve a graph edge id to its full record (domain + active route count + vertices). */
+    getGraphEdge(edgeId: number): TradeGraphEdge | null;
+}
+
+/** Trade graph edge between two vertices (cities or plot locations), per domain. */
+declare interface TradeGraphEdge {
+    /** Numeric DomainType id (0 = SEA, 1 = AIR, 2 = LAND — confirmed in Trade.ltp tuner). */
+    domain: number;
+    numActiveRoutes: number;
+    fromVertex: TradeGraphVertex;
+    toVertex: TradeGraphVertex;
+    path: number[];
+}
+
+declare interface TradeGraphVertex {
+    cityId?: ID;
+    location?: Location;
+}
+
 declare var Players: {
     get: (playerId: number) => Player;
     getAlive: () => Player[];
@@ -70,6 +165,9 @@ declare var MapCities: any;
 declare var Loading: any;
 declare var RevealedStates: any;
 declare var WorldUI;
+
+/** Runtime enum: maps DOMAIN_SEA/DOMAIN_AIR/DOMAIN_LAND strings to numeric ids the engine uses on TradeRouteInstance.domain. */
+declare var DomainType: { [domainType: string]: number };
 
 declare interface Constructibles {
     getByComponentID: (componentId: ID) => ConstructibleInstance;
@@ -280,7 +378,7 @@ declare interface Player {
         changeDiplomacyBalance: (amount: number) => void;
         diplomacyBalance: number;
     };
-    Trade: any;
+    Trade: PlayerTrade;
     Techs: PlayerTechs;
     Happiness?: PlayerHappiness;
     Influence?: PlayerInfluence;
@@ -381,9 +479,7 @@ declare interface Game {
     Unlocks: Record<string, unknown>;
     UnitOperations: Record<string, unknown>;
     UnitCommands: Record<string, unknown>;
-    Trade: {
-        calculateTradeRouteExportYield(routeId: ID, yieldType: string): number;
-    };
+    Trade: GameTrade;
     Summary: Record<string, unknown>;
     Resources: Record<string, unknown>;
     Religion: Record<string, unknown>;

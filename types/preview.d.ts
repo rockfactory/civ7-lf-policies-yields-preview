@@ -28,7 +28,7 @@ declare interface ResolvedModifier {
     OwnerRequirementSet: ResolvedRequirementSet | null;
 }
 
-declare type SubjectType = 'City' | 'Plot' | 'Unit' | 'Player' | 'Constructible' | 'District';
+declare type SubjectType = 'City' | 'Plot' | 'Unit' | 'Player' | 'Constructible' | 'District' | 'TradeRoute';
 
 declare type CreateSubject<T extends SubjectType = SubjectType, Data> = {
     type: T;
@@ -88,7 +88,13 @@ declare type PlayerSubject = CreateSubject<'Player', {
     player: Player;
 }>;
 
-declare type PreviewSubject = ConstructibleSubject | CitySubject | PlotSubject | UnitSubject | PlayerSubject | DistrictSubject;
+declare type TradeRouteSubject = CreateSubject<'TradeRoute', {
+    tradeRoute: TradeRouteInstance;
+    /** The trade route's originating player (the route's left city's owner). */
+    player: Player;
+}>;
+
+declare type PreviewSubject = ConstructibleSubject | CitySubject | PlotSubject | UnitSubject | PlayerSubject | DistrictSubject | TradeRouteSubject;
 
 declare interface YieldsDelta {
     Amount: {

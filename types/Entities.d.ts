@@ -32,7 +32,8 @@ declare interface ConstructibleInstance {
 }
   
 declare interface TradeRouteInstance {
-    id: ID;
+    /** Primitive route id (e.g. 786443). Shared between `city.Trade.routes` and `player.Trade.getCurrentTradeRoutes()`. */
+    id: number;
     name: string;
     leftCityID: ID;
     rightCityID: ID;
@@ -42,4 +43,18 @@ declare interface TradeRouteInstance {
     rightPayload: {
         resourceValues: ID[];
     };
+}
+
+/**
+ * Richer view of a current trade route as returned by `player.Trade.getCurrentTradeRoutes()`.
+ * Exposes `.domain` (which the thin `TradeRouteInstance` does not), plus same-id linkage.
+ */
+declare interface CurrentTradeRoute {
+    id: number;
+    /** Numeric DomainType id (0 = SEA, etc.). */
+    domain: number;
+    status: number[];
+    targetCityId: ID;
+    nearestCityId: ID;
+    importPayloads: unknown[];
 }

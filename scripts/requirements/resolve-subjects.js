@@ -280,6 +280,27 @@ function resolveBaseSubjects(modifier, parentSubject = null) {
             return wrapDistrictSubjects(districts);
         }
 
+        // One TradeRoute subject per outgoing trade route of the local player. Route-scoped
+        // requirements (REQUIREMENT_TRADE_ROUTE_IS_DOMAIN, ...) filter on the carried route;
+        // EFFECT_PLAYER_ADJUST_YIELD then applies once per surviving route.
+        case "COLLECTION_PLAYER_TRADE_ROUTES": {
+            /** @type {TradeRouteInstance[]} */
+            const routes = [];
+            for (const city of player.Cities.getCities()) {
+                for (const route of city.Trade?.routes ?? []) {
+                    // Only count routes originating from our cities to avoid double-counting
+                    // when the same route appears in both endpoint cities' route lists.
+                    if (route.leftCityID.owner !== player.id) continue;
+                    routes.push(route);
+                }
+            }
+            return routes.map(tradeRoute => ({
+                type: "TradeRoute",
+                isEmpty: false,
+                tradeRoute,
+                player,
+            }));
+        }
 
         default:
             throw new Error(`Unhandled CollectionType: ${modifier.CollectionType}`);

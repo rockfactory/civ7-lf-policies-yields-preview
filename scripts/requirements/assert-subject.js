@@ -31,7 +31,7 @@ export function assertSubjectUnit(subject) {
 /**
  * For now, it should always be possible to match any subject against player data.
  * @param {PreviewSubject} subject
- * @returns {asserts subject is PlayerSubject | CitySubject | UnitSubject | PlotSubject | ConstructibleSubject}
+ * @returns {asserts subject is PlayerSubject | CitySubject | UnitSubject | PlotSubject | ConstructibleSubject | TradeRouteSubject}
  */
 export function assertSubjectPlayer(subject) {
     if (subject.type !== 'Player'
@@ -39,8 +39,19 @@ export function assertSubjectPlayer(subject) {
         && subject.type !== 'Unit'
         && subject.type !== 'Plot'
         && subject.type !== 'Constructible'
+        && subject.type !== 'TradeRoute'
     ) {
         throw new Error(`Expected Player subject, got N/A: ${JSON.stringify(subject)}`);
+    }
+}
+
+/**
+ * @param {PreviewSubject} subject
+ * @returns {asserts subject is TradeRouteSubject}
+ */
+export function assertSubjectTradeRoute(subject) {
+    if (subject.type !== 'TradeRoute') {
+        throw new Error(`Expected TradeRoute subject, got ${subject.type}`);
     }
 }
 
