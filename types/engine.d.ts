@@ -191,6 +191,10 @@ interface PlayerCulture {
     getAvailableTrees(): number[];
     getNodeCost(nodeType: number): number;
     getLastCompletedNodeType(): number;
+    /** Make a single tradition (policy card) slottable, by tradition `$index`. */
+    unlockTradition(traditionIndex: number): void;
+    /** Whether a tradition (policy card) is currently unlocked, by `$index`. */
+    isTraditionUnlocked(traditionIndex: number): boolean;
 }
 
 declare interface ProgressionResearchedNode {

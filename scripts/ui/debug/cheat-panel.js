@@ -186,41 +186,36 @@ function grantInfluence(amount) {
 }
 
 /**
- * Unlock every civic node from every culture tree of the current age,
- * including unique trees belonging to other civilizations.
- * @returns {{ granted: number; failed: number }}
+ * Make every tradition (policy card) in the game directly slottable,
+ * bypassing the civic-tree unlock path. Iterates GameInfo.Traditions and
+ * calls `Culture.unlockTradition` for each one not already unlocked.
+ * @returns {{ unlocked: number; skipped: number; failed: number }}
  */
-function grantAllPoliciesAllCivs() {
-    const ageInfo = GameInfo.Ages.lookup(Game.age);
-    const ageType = ageInfo?.AgeType;
-    if (!ageType) {
-        console.warn('[LFDebug] cannot resolve current age');
-        return { granted: 0, failed: 0 };
+function unlockAllTraditions() {
+    const player = getLocalPlayer();
+    if (!player?.Culture) {
+        console.warn('[LFDebug] no local player culture');
+        return { unlocked: 0, skipped: 0, failed: 0 };
     }
 
-    let granted = 0;
+    let unlocked = 0;
+    let skipped = 0;
     let failed = 0;
-    for (const tree of GameInfo.ProgressionTrees) {
-        if (tree.SystemType !== 'SYSTEM_CULTURE') continue;
-        if (tree.AgeType && tree.AgeType !== ageType) continue;
-
-        for (const node of GameInfo.ProgressionTreeNodes) {
-            if (node.ProgressionTree !== tree.ProgressionTreeType) continue;
-            try {
-                Game.PlayerOperations.sendRequest(
-                    GameContext.localPlayerID,
-                    PlayerOperationTypes.GRANT_TREE_NODE,
-                    { ProgressionTreeNodeType: node.$index, FullyUnlock: 1 }
-                );
-                granted++;
-            } catch (e) {
-                failed++;
-                console.warn('[LFDebug] failed to grant', node.ProgressionTreeNodeType, e);
+    for (const tradition of GameInfo.Traditions) {
+        try {
+            if (player.Culture.isTraditionUnlocked(tradition.$index)) {
+                skipped++;
+                continue;
             }
+            player.Culture.unlockTradition(tradition.$index);
+            unlocked++;
+        } catch (e) {
+            failed++;
+            console.warn('[LFDebug] failed to unlock', tradition.TraditionType, e);
         }
     }
-    console.log(`[LFDebug] grantAllPoliciesAllCivs: granted=${granted} failed=${failed} age=${ageType}`);
-    return { granted, failed };
+    console.log(`[LFDebug] unlockAllTraditions: unlocked=${unlocked} skipped=${skipped} failed=${failed}`);
+    return { unlocked, skipped, failed };
 }
 
 /** @returns {HTMLElement | null} */
@@ -268,8 +263,8 @@ function ensurePanel() {
         setTimeout(updatePanel, 100);
     });
     allBtn.addEventListener('click', () => {
-        const result = grantAllPoliciesAllCivs();
-        allBtn.textContent = `Granted ${result.granted} nodes`;
+        const result = unlockAllTraditions();
+        allBtn.textContent = `Unlocked ${result.unlocked} (skipped ${result.skipped})`;
         setTimeout(() => { allBtn.textContent = 'Unlock All Policies (All Civs)'; }, 2000);
         setTimeout(updatePanel, 100);
     });
@@ -378,7 +373,7 @@ function init() {
         refresh: updatePanel,
         grantTech: () => grantNode(getCurrentTechNode()),
         grantCivic: () => grantNode(getCurrentCivicNode()),
-        grantAllPolicies: () => grantAllPoliciesAllCivs(),
+        grantAllPolicies: () => unlockAllTraditions(),
         grantGold: (/** @type {number} */ amount = 500) => grantGold(amount),
         grantInfluence: (/** @type {number} */ amount = 500) => grantInfluence(amount),
     };
