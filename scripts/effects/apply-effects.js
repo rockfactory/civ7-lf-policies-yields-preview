@@ -602,17 +602,23 @@ function applyYieldsForSubject(context, subject, modifier) {
             assertSubjectCity(subject);
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
 
+            const divisor = Number(modifier.Arguments.Divisor?.Value || 1);
+            // Variants observed across Base + DLC:
+            //   - Urban=true (and Rural=false) — QUIPU urban
+            //   - Rural=true (and Urban=false) — QUIPU rural
+            //   - All=true                     — SOLEYMANIYEH_PALACE_I/II (Qajar DLC)
             if (modifier.Arguments.Urban?.Value === 'true') {
-                const urbanFactor = subject.city.urbanPopulation / Number(modifier.Arguments.Divisor?.Value || 1);
-                context.addYieldsAmountTimes(modifier, urbanFactor);
+                context.addYieldsAmountTimes(modifier, subject.city.urbanPopulation / divisor);
             }
             if (modifier.Arguments.Rural?.Value === 'true') {
-                const ruralFactor = subject.city.ruralPopulation / Number(modifier.Arguments.Divisor?.Value || 1);
-                context.addYieldsAmountTimes(modifier, ruralFactor);
+                context.addYieldsAmountTimes(modifier, subject.city.ruralPopulation / divisor);
+            }
+            if (modifier.Arguments.All?.Value === 'true') {
+                const totalPop = subject.city.urbanPopulation + subject.city.ruralPopulation;
+                context.addYieldsAmountTimes(modifier, totalPop / divisor);
             }
 
-            // Should have at least one of the two
-            if (!modifier.Arguments.Urban?.Value && !modifier.Arguments.Rural?.Value) {
+            if (!modifier.Arguments.Urban?.Value && !modifier.Arguments.Rural?.Value && !modifier.Arguments.All?.Value) {
                 throw new Error(`${modifier.Modifier.ModifierId} - EFFECT_CITY_ADJUST_YIELD_PER_POPULATION, missing arguments: ${JSON.stringify(modifier.Arguments)}`);
             }
             return
