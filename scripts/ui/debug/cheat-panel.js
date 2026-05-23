@@ -76,6 +76,12 @@ function setupStyles() {
         opacity: 0.45;
         cursor: not-allowed;
     }
+    #${PANEL_ID} button.lf-debug-action.lf-debug-bulk {
+        background: rgba(180, 110, 60, 0.6);
+    }
+    #${PANEL_ID} button.lf-debug-action.lf-debug-bulk:hover:not(:disabled) {
+        background: rgba(220, 140, 80, 0.85);
+    }
     #${PANEL_ID}.lf-debug-collapsed {
         min-width: 0;
         gap: 0;
@@ -147,6 +153,44 @@ function grantNode(nodeType) {
     }
 }
 
+/**
+ * Unlock every civic node from every culture tree of the current age,
+ * including unique trees belonging to other civilizations.
+ * @returns {{ granted: number; failed: number }}
+ */
+function grantAllPoliciesAllCivs() {
+    const ageInfo = GameInfo.Ages.lookup(Game.age);
+    const ageType = ageInfo?.AgeType;
+    if (!ageType) {
+        console.warn('[LFDebug] cannot resolve current age');
+        return { granted: 0, failed: 0 };
+    }
+
+    let granted = 0;
+    let failed = 0;
+    for (const tree of GameInfo.ProgressionTrees) {
+        if (tree.SystemType !== 'SYSTEM_CULTURE') continue;
+        if (tree.AgeType && tree.AgeType !== ageType) continue;
+
+        for (const node of GameInfo.ProgressionTreeNodes) {
+            if (node.ProgressionTree !== tree.ProgressionTreeType) continue;
+            try {
+                Game.PlayerOperations.sendRequest(
+                    GameContext.localPlayerID,
+                    PlayerOperationTypes.GRANT_TREE_NODE,
+                    { ProgressionTreeNodeType: node.$index, FullyUnlock: 1 }
+                );
+                granted++;
+            } catch (e) {
+                failed++;
+                console.warn('[LFDebug] failed to grant', node.ProgressionTreeNodeType, e);
+            }
+        }
+    }
+    console.log(`[LFDebug] grantAllPoliciesAllCivs: granted=${granted} failed=${failed} age=${ageType}`);
+    return { granted, failed };
+}
+
 /** @returns {HTMLElement | null} */
 function ensurePanel() {
     const existing = document.getElementById(PANEL_ID);
@@ -164,11 +208,13 @@ function ensurePanel() {
         </div>
         <button class="lf-debug-action" data-action="tech" type="button"></button>
         <button class="lf-debug-action" data-action="civic" type="button"></button>
+        <button class="lf-debug-action lf-debug-bulk" data-action="all-policies" type="button">Unlock All Policies (All Civs)</button>
     `;
     document.body.appendChild(panel);
 
     const techBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="tech"]'));
     const civicBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="civic"]'));
+    const allBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="all-policies"]'));
     const toggleBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('.lf-debug-toggle'));
 
     techBtn.addEventListener('click', () => {
@@ -183,6 +229,12 @@ function ensurePanel() {
         if (grantNode(node)) {
             console.log('[LFDebug] granted civic node', node);
         }
+        setTimeout(updatePanel, 100);
+    });
+    allBtn.addEventListener('click', () => {
+        const result = grantAllPoliciesAllCivs();
+        allBtn.textContent = `Granted ${result.granted} nodes`;
+        setTimeout(() => { allBtn.textContent = 'Unlock All Policies (All Civs)'; }, 2000);
         setTimeout(updatePanel, 100);
     });
     toggleBtn.addEventListener('click', () => {
@@ -280,6 +332,7 @@ function init() {
         refresh: updatePanel,
         grantTech: () => grantNode(getCurrentTechNode()),
         grantCivic: () => grantNode(getCurrentCivicNode()),
+        grantAllPolicies: () => grantAllPoliciesAllCivs(),
     };
 }
 

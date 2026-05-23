@@ -596,7 +596,7 @@ interface ProgressionTreeNodeUnlocks {
   UnlockDepth: number;
 }
 
-interface ProgressionTreeNodes {
+interface ProgressionTreeNodes extends BaseTableEntry {
   ProgressionTreeNodeType: string;
   CanBoost: boolean;
   CanSteal: boolean;
@@ -611,6 +611,16 @@ interface ProgressionTreeNodes {
   StartingUnlockDepth: number;
   UILayoutColumn?: number;
   UILayoutRow?: number;
+}
+
+declare interface ProgressionTree extends BaseTableEntry {
+  ProgressionTreeType: string;
+  AgeType?: string;
+  SystemType: string;
+  Name: string;
+  CostProgressionModel?: string;
+  CostProgressionParam1?: number;
+  PrereqFormat?: string;
 }
 
 declare interface Improvement extends BaseTableEntry {
@@ -798,6 +808,7 @@ declare interface IGameInfo {
   Resources: GameInfoArray<Resource>;
   ProgressionTreeNodeUnlocks: GameInfoArray<ProgressionTreeNodeUnlocks>;
   ProgressionTreeNodes: GameInfoArray<ProgressionTreeNodes>;
+  ProgressionTrees: GameInfoArray<ProgressionTree>;
   Improvements: GameInfoArray<Improvement>;
   District_FreeConstructibles: GameInfoArray<DistrictFreeConstructible>;
   CityStateBonuses: GameInfoArray<CityStateBonus>;
