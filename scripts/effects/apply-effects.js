@@ -66,9 +66,10 @@ function applyYieldsForSubject(context, subject, modifier) {
             if (subject.isEmpty) return context.addYieldTypeAmount(toYieldType, 0);
 
             // PolicyYieldsCache.getCityTradeYields only extracts YIELD_GOLD "from trade" steps.
+            // Any other FromYieldType would silently return 0, which we never want: throw so the
+            // unsupported variant shows up in UI.log and we can extend the helper.
             if (fromYieldType !== "YIELD_GOLD") {
-                console.warn(`${modifier.Modifier.ModifierId}: FromYieldType=${fromYieldType} not supported, only YIELD_GOLD`);
-                return context.addYieldTypeAmount(toYieldType, 0);
+                throw new Error(`${modifier.Modifier.ModifierId}: ${modifier.EffectType} with FromYieldType=${fromYieldType} not implemented (only YIELD_GOLD supported)`);
             }
 
             let totalTradeYield = 0;

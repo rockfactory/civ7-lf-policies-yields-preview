@@ -221,6 +221,30 @@ export function getPlayerUnlockedProgressionTreeNodes(player, modifier) {
 }
 
 /**
+ * Group player's outgoing trade routes by the other player they go to, and return the maximum count.
+ * Used by `REQUIREMENT_PLAYER_HAS_X_TRADE_ROUTES_WITH_PLAYER {AllPlayers=true}`: the requirement is
+ * satisfied if AT LEAST ONE other player has ≥ Amount routes from us (OR semantics across players).
+ * @param {Player} player
+ */
+export function getMaxTradeRoutesPerOtherPlayer(player) {
+    const counts = new Map();
+    for (const city of player.Cities.getCities()) {
+        const routes = city.Trade?.routes ?? [];
+        for (const route of routes) {
+            if (route.leftCityID.owner !== player.id) continue;
+            const otherId = route.rightCityID.owner;
+            if (otherId == null || otherId === player.id) continue;
+            counts.set(otherId, (counts.get(otherId) ?? 0) + 1);
+        }
+    }
+    let max = 0;
+    for (const count of counts.values()) {
+        if (count > max) max = count;
+    }
+    return max;
+}
+
+/**
  * @param {Player} player
  * @param {ResolvedModifier} modifier
  */

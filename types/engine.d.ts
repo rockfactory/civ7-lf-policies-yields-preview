@@ -240,6 +240,16 @@ declare interface Player {
         getRelationshipEnum: (otherPlayer: Player) => number;
         hasAllied: (otherPlayerId: number) => boolean;
         isAtWarWith: (otherPlayerId: number) => boolean;
+        /**
+         * War-support bonus accumulated by THIS player against `targetPlayerId`.
+         * `isFormalWar` toggles formal vs surprise-war computation rules.
+         * See `base-standard/ui/diplomacy/diplomacy-manager.js` for the canonical
+         * call pattern: `canDeclareWarOn(target, WarTypes.FORMAL_WAR).Success` is
+         * passed as the boolean. For an ongoing war, `true` is the safe default.
+         */
+        getTotalWarSupportBonusForPlayer: (targetPlayerId: number, isFormalWar: boolean) => number;
+        /** War-support bonus accumulated by `targetPlayerId` against THIS player. Same semantics as the For variant. */
+        getTotalWarSupportBonusForTarget: (targetPlayerId: number, isFormalWar: boolean) => number;
     };
     Stats: {
         getYields(): YieldEntry[]; // index is the yield type,e.g. 0 = food/gold

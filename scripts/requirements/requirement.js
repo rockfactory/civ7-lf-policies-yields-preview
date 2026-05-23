@@ -1,7 +1,7 @@
 import { hasUnitTag, isUnitTypeInfoTargetOfArguments } from "../game/units.js";
 import { getCityGreatWorksCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
 import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType } from "../game/plot.js";
-import { getPlayerCityStatesSuzerain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
+import { getMaxTradeRoutesPerOtherPlayer, getPlayerCityStatesSuzerain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
 import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "./assert-subject.js";
 import { PolicyExecutionContext } from "../core/execution-context.js";
 import { PolicyYieldsCache } from "../cache.js";
@@ -150,7 +150,7 @@ export function isRequirementSatisfied(player, subject, requirement) {
                 return false;
             }
 
-            return cityReligion === playerReligion.getReligionType();
+            return cityReligion === playerReligion?.getReligionType();
         }
 
         case "REQUIREMENT_CITY_HAS_ANY_WONDER": {
@@ -439,7 +439,50 @@ export function isRequirementSatisfied(player, subject, requirement) {
 
         case "REQUIREMENT_PLAYER_HAS_X_WAR_SUPPORT": {
             assertSubjectPlayer(subject);
-            throw new Error(`Unhandled RequirementType: ${requirement.Requirement.RequirementType}`);
+            // Variants observed across Base + DLC XML:
+            //   - MoreThanOpponent only (LEND_LEASE)
+            //   - Amount + MoreThanOpponent (sayyida narrative)
+            //   - Amount + LessThanOpponent (sayyida narrative, AQ_REVOLUTION_CRISIS_2)
+            //   - Amount only (EX_REVOLUTION_CRISIS_2)
+            // Amount is a lower bound on OUR war support; the More/LessThanOpponent flags add
+            // a strict comparison against the opponent's. Satisfied if ANY major other player matches.
+            const args = requirement.Arguments;
+            const hasAmount = args.Amount?.Value != null;
+            const requiresMore = args.MoreThanOpponent?.Value?.toLowerCase?.() === 'true';
+            const requiresLess = args.LessThanOpponent?.Value?.toLowerCase?.() === 'true';
+            if (!hasAmount && !requiresMore && !requiresLess) {
+                throw new Error(`${requirement.Requirement.RequirementType}: unhandled arguments: ${JSON.stringify(args)}`);
+            }
+            const amount = hasAmount ? Number(args.getAsserted('Amount')) : 0;
+            const diplomacy = subject.player.Diplomacy;
+            if (!diplomacy) return false;
+            return Players.getAlive().some(otherPlayer => {
+                if (!otherPlayer.isMajor || otherPlayer.id === subject.player.id) return false;
+                const ours = diplomacy.getTotalWarSupportBonusForPlayer(otherPlayer.id, true);
+                const theirs = diplomacy.getTotalWarSupportBonusForTarget(otherPlayer.id, true);
+                if (hasAmount && ours < amount) return false;
+                if (requiresMore && ours <= theirs) return false;
+                if (requiresLess && ours >= theirs) return false;
+                return true;
+            });
+        }
+
+        case "REQUIREMENT_PLAYER_HAS_X_TRADE_ROUTES_WITH_PLAYER": {
+            assertSubjectPlayer(subject);
+            // Variants observed across Base + DLC XML:
+            //   - Amount + AllPlayers (CHOLA, DEVAKOSHTA, traditions, many narratives)
+            //   - Amount + AllPlayers + DomainType (narratives only) — filters by route domain
+            //   - Amount + AllPlayers + DistantLands (narratives only) — filters by destination
+            //   - Amount only (1 narrative case) — target player not inferable
+            // Only the basic AllPlayers variant is needed for tradition previews; the others would
+            // change the count in non-trivial ways and lack a stable target — throw to surface them.
+            const args = requirement.Arguments;
+            const allPlayers = args.AllPlayers?.Value?.toLowerCase?.() === 'true';
+            if (allPlayers && !args.DomainType?.Value && !args.DistantLands?.Value) {
+                const amount = Number(args.getAsserted('Amount'));
+                return getMaxTradeRoutesPerOtherPlayer(subject.player) >= amount;
+            }
+            throw new Error(`${requirement.Requirement.RequirementType}: unhandled arguments: ${JSON.stringify(args)}`);
         }
 
         case "REQUIREMENT_PLAYER_IS_MAJOR": {
