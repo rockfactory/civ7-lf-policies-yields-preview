@@ -12,6 +12,11 @@ import { PolicyYieldsContext } from "../core/execution-context.js";
 import { assertSubjectCity, assertSubjectConstructible, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "../requirements/assert-subject.js";
 import { PolicyYieldsCache } from "../cache.js";
 
+/** Flip to `true` while diagnosing missing age-scoped data (warehouse/adjacency rows defined in
+ * `*-no-persist.xml` of an age not currently loaded). Off by default — these aren't bugs we can
+ * fix and they generate hundreds of lines of noise in UI.log. */
+const LF_DEBUG_WARNINGS = false;
+
 /**
  * @param {PolicyYieldsContext} yieldsContext 
  * @param {PreviewSubject[]} subjects 
@@ -315,8 +320,8 @@ function applyYieldsForSubject(context, subject, modifier) {
                 if (!adjacencyType) {
                     // Defensive: some modifiers reference adjacency IDs that are gated by
                     // RequiresActivation or not yet loaded in the current age (e.g. JINSI_KAMIL).
-                    // Skip silently with a warning instead of crashing the whole preview.
-                    console.warn(`${modifier.Modifier.ModifierId}: AdjacencyType not found for ID: ${adjacencyId}`);
+                    // Skip silently — the owning tradition isn't selectable outside its age.
+                    if (LF_DEBUG_WARNINGS) console.warn(`${modifier.Modifier.ModifierId}: AdjacencyType not found for ID: ${adjacencyId}`);
                     return;
                 }
                 // console.warn("EFFECT_CITY_ACTIVATE_CONSTRUCTIBLE_ADJACENCY AdjacencyType", adjacencyType.ID, subject.city?.name);
@@ -349,10 +354,10 @@ function applyYieldsForSubject(context, subject, modifier) {
             adjancencies.forEach(adjacencyId => {
                 const adjacencyType = AdjancenciesCache.get(adjacencyId);
                 if (!adjacencyType) {
-                    console.warn(`${modifier.Modifier.ModifierId}: AdjacencyType not found for ID: ${adjacencyId}`);
+                    if (LF_DEBUG_WARNINGS) console.warn(`${modifier.Modifier.ModifierId}: AdjacencyType not found for ID: ${adjacencyId}`);
                     return;
                 }
-                
+
                 const validConstructibles = findCityConstructiblesMatchingAdjacency(subject.isEmpty ? null : subject.city, adjacencyId);
                 if (validConstructibles.length === 0 || subject.isEmpty) {
                     return context.addYieldTypeAmount(adjacencyType.YieldType, 0);
@@ -396,13 +401,11 @@ function applyYieldsForSubject(context, subject, modifier) {
             warehousesYieldChanges.forEach(warehouseYield => {
                 const warehouseYieldType = GameInfo.Warehouse_YieldChanges.find(wyc => wyc.ID === warehouseYield);
                 if (!warehouseYieldType) {
-                    // Defensive: some Warehouse_YieldChanges rows live in age-scoped *-no-persist.xml
+                    // Some Warehouse_YieldChanges rows live in age-scoped *-no-persist.xml
                     // (e.g. LandHeritageMountainHappiness in age-modern/constructibles-no-persist.xml)
                     // and only appear in `GameInfo.Warehouse_YieldChanges` while that age is loaded.
-                    // The owning tradition won't actually be selectable outside its age, but the
-                    // preview pipeline can still walk the modifier — skip silently with a warning
-                    // instead of crashing the whole preview (same pattern as AdjacencyType above).
-                    console.warn(`${modifier.Modifier.ModifierId}: WarehouseYieldType not found for ID: ${warehouseYield}`);
+                    // The owning tradition isn't selectable outside its age — skip silently.
+                    if (LF_DEBUG_WARNINGS) console.warn(`${modifier.Modifier.ModifierId}: WarehouseYieldType not found for ID: ${warehouseYield}`);
                     return;
                 }
 
@@ -424,7 +427,7 @@ function applyYieldsForSubject(context, subject, modifier) {
                 const warehouseYieldType = GameInfo.Warehouse_YieldChanges.find(wyc => wyc.ID === warehouseYield);
                 if (!warehouseYieldType) {
                     // See EFFECT_CITY_GRANT_WAREHOUSE_YIELD above: age-scoped *-no-persist.xml rows.
-                    console.warn(`${modifier.Modifier.ModifierId}: WarehouseYieldType not found for ID: ${warehouseYield}`);
+                    if (LF_DEBUG_WARNINGS) console.warn(`${modifier.Modifier.ModifierId}: WarehouseYieldType not found for ID: ${warehouseYield}`);
                     return;
                 }
 
