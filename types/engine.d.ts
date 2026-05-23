@@ -516,6 +516,7 @@ declare interface GameplayMap {
     isCliffCrossing: (x: number, y: number) => boolean;
     isRiver: (x: number, y: number) => boolean;
     getRiverName: (x: number, y: number) => string;
+    getAppeal: (x: number, y: number) => number;
     isWater: (x: number, y: number) => boolean;
     getPlotTag: (x: number, y: number, tag: string) => string;
     hasPlotTag: (x: number, y: number, tag: string) => boolean;

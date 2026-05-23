@@ -152,3 +152,24 @@ export function isPlotAdjacentToCoast(plot) {
     }
     return false;
 }
+
+/**
+ * Resolve the GlobalParameter-backed appeal threshold for a `REQUIREMENT_PLOT_HAS_APPEAL`
+ * argument set. Mirrors the two charm tiers used by the base-game appeal lens.
+ * Throws for any other argument shape.
+ * @param {ResolvedArguments} args
+ * @returns {number}
+ */
+export function getAppealThresholdFromArgs(args) {
+    let paramName = null;
+    if (args.UseAppealHappinessThreshold?.Value?.toLowerCase?.() === 'true') {
+        paramName = "APPEAL_FOR_HAPPINESS_TILE_YIELD";
+    } else if (args.UseAppealDoubleHappinessThreshold?.Value?.toLowerCase?.() === 'true') {
+        paramName = "APPEAL_FOR_DOUBLE_HAPPINESS_TILE_YIELD";
+    } else {
+        throw new Error(`getAppealThresholdFromArgs: unhandled arguments: ${JSON.stringify(args)}`);
+    }
+    const row = GameInfo.GlobalParameters.lookup(paramName);
+    if (!row) throw new Error(`getAppealThresholdFromArgs: missing GlobalParameter ${paramName}`);
+    return parseInt(row.Value);
+}

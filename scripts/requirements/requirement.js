@@ -1,6 +1,6 @@
 import { hasUnitTag, isUnitTypeInfoTargetOfArguments } from "../game/units.js";
 import { getCityGreatWorksCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
-import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType } from "../game/plot.js";
+import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType, getAppealThresholdFromArgs } from "../game/plot.js";
 import { getMaxTradeRoutesPerOtherPlayer, getPlayerCityStatesSuzerain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
 import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "./assert-subject.js";
 import { PolicyExecutionContext } from "../core/execution-context.js";
@@ -294,6 +294,14 @@ export function isRequirementSatisfied(player, subject, requirement) {
                 });
             }
             throw new Error(`${requirement.Requirement.RequirementType}: unhandled arguments: ${JSON.stringify(requirement.Arguments)}`);
+        }
+
+        case "REQUIREMENT_PLOT_HAS_APPEAL": {
+            assertSubjectPlot(subject);
+            // Threshold is dynamic and we should read it from global params
+            const threshold = getAppealThresholdFromArgs(requirement.Arguments);
+            const loc = GameplayMap.getLocationFromIndex(subject.plot);
+            return GameplayMap.getAppeal(loc.x, loc.y) >= threshold;
         }
 
         case "REQUIREMENT_PLOT_ADJACENT_TO_OWNER": {

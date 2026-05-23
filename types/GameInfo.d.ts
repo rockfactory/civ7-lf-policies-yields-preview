@@ -242,6 +242,11 @@ declare interface TypeTag {
   Type: string;
 }
 
+declare interface GlobalParameter {
+  Name: string;
+  Value: string;
+}
+
 /**
  * Represents a Unit in the game.
  * @property {string} UnitType - Unique identifier for the unit (PK)
@@ -770,8 +775,16 @@ declare interface LeaderTrait extends BaseTableEntry {
   TraitType: string;
 }
 
-declare type GameInfoArray<T> = T[] & { 
+declare type GameInfoArray<T> = T[] & {
   lookup(hash: number): T | undefined;
+};
+
+/**
+ * Name-keyed engine table (GlobalParameters): engine accepts the parameter name as a
+ * string in `lookup`, unlike the hash-keyed `GameInfoArray<T>`.
+ */
+declare type GameInfoNameKeyedArray<T> = T[] & {
+  lookup(name: string): T | undefined;
 };
 
 /**
@@ -790,6 +803,7 @@ declare interface IGameInfo {
   RequirementArguments: GameInfoArray<RequirementArgument>;
   Terrains: GameInfoArray<Terrain>;
   TypeTags: GameInfoArray<TypeTag>;
+  GlobalParameters: GameInfoNameKeyedArray<GlobalParameter>;
   Yields: GameInfoArray<Yield>;
   Projects: GameInfoArray<Project>;
   Constructibles: GameInfoArray<Constructible>;
