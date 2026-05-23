@@ -562,6 +562,18 @@ export function isRequirementSatisfied(player, subject, requirement) {
             throw new Error(`${requirement.Requirement.RequirementType}: unhandled arguments: ${JSON.stringify(args)}`);
         }
 
+        case "REQUIREMENT_TRADE_ROUTE_IS_DISTANT_LANDS": {
+            // No-args requirement (only 2 occurrences in Base, both on MANDARIN_MOD_NAVAL_TRADE_ATTACH_*).
+            // True when the route's destination city sits in the player's distant lands hemisphere.
+            // `inverse="true"` in XML inverts it (e.g. ATTACH_HOMELANDS variant).
+            assertSubjectTradeRoute(subject);
+            const destCity = Cities.get(subject.tradeRoute.rightCityID);
+            if (!destCity) {
+                throw new Error(`REQUIREMENT_TRADE_ROUTE_IS_DISTANT_LANDS: destination city not found for route ${subject.tradeRoute.id} (${subject.tradeRoute.name})`);
+            }
+            return destCity.isDistantLands;
+        }
+
         case "REQUIREMENT_TRADE_ROUTE_IS_DOMAIN": {
             // Subject-level filter for routes emitted by COLLECTION_PLAYER_TRADE_ROUTES.
             // Only DomainType is observed in Base + DLC XML (always DOMAIN_SEA, on
