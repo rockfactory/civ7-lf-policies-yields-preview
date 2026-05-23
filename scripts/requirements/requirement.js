@@ -296,6 +296,25 @@ export function isRequirementSatisfied(player, subject, requirement) {
             throw new Error(`${requirement.Requirement.RequirementType}: unhandled arguments: ${JSON.stringify(requirement.Arguments)}`);
         }
 
+        case "REQUIREMENT_PLOT_ADJACENT_TO_OWNER": {
+            assertSubjectPlot(subject);
+            // Variants observed across Base + DLC:
+            //   - no args (combat unit promotions, constructible-modifiers modern): adjacency = 1
+            //   - MinDistance + MaxDistance (CLAN_SOCIETY_II tot uses 1..6; unit-promotions 1..3)
+            // Defaults to MinDistance=1, MaxDistance=1 (true adjacency) when args are absent.
+            const minDistance = Number(requirement.Arguments.MinDistance?.Value ?? 1);
+            const maxDistance = Number(requirement.Arguments.MaxDistance?.Value ?? 1);
+            const origin = GameplayMap.getLocationFromIndex(subject.plot);
+            const candidates = GameplayMap.getPlotIndicesInRadius(origin.x, origin.y, maxDistance);
+            return candidates.some(idx => {
+                if (idx === subject.plot) return false;
+                const loc = GameplayMap.getLocationFromIndex(idx);
+                if (GameplayMap.getOwner(loc.x, loc.y) !== player.id) return false;
+                const dist = GameplayMap.getPlotDistance(origin.x, origin.y, loc.x, loc.y);
+                return dist >= minDistance && dist <= maxDistance;
+            });
+        }
+
         case "REQUIREMENT_PLOT_ADJACENT_TERRAIN_TYPE_MATCHES": {
             assertSubjectPlot(subject);
             return getAdjacentPlots(subject.plot).some(plot => {
