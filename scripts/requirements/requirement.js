@@ -357,6 +357,16 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return true;
         }
 
+        case "REQUIREMENT_PLOT_RESOURCE_TYPE_MATCHES": {
+            assertSubjectPlot(subject);
+            // Single observed variant across Base + DLC: just ResourceType=RESOURCE_XXX.
+            const requiredType = requirement.Arguments.getAsserted('ResourceType');
+            const loc = GameplayMap.getLocationFromIndex(subject.plot);
+            const resource = GameplayMap.getResourceType(loc.x, loc.y);
+            if (resource == ResourceTypes.NO_RESOURCE) return false;
+            return GameInfo.Resources.lookup(resource)?.ResourceType === requiredType;
+        }
+
         // Constructible
         case "REQUIREMENT_CONSTRUCTIBLE_TAG_MATCHES": {
             if (subject.type !== 'Constructible') return false;
