@@ -282,6 +282,20 @@ export function isRequirementSatisfied(player, subject, requirement) {
             });
         }
 
+        case "REQUIREMENT_PLOT_ADJACENT_TO_RIVER": {
+            assertSubjectPlot(subject);
+            // Only Navigable=true observed in Base + DLC inline usages (LEADER_AMERICA_TUBMAN,
+            // SHAWNEE traditions, BUGANDA-related age-modern). The base-game declaration in
+            // modifiers.xml names the requirement REQ_PLOT_ADJACENT_NAVIGABLE_RIVER, consistent.
+            if (requirement.Arguments.Navigable?.Value?.toLowerCase?.() === 'true') {
+                return getAdjacentPlots(subject.plot).some(plot => {
+                    const loc = GameplayMap.getLocationFromIndex(plot);
+                    return GameplayMap.isNavigableRiver(loc.x, loc.y);
+                });
+            }
+            throw new Error(`${requirement.Requirement.RequirementType}: unhandled arguments: ${JSON.stringify(requirement.Arguments)}`);
+        }
+
         case "REQUIREMENT_PLOT_ADJACENT_TERRAIN_TYPE_MATCHES": {
             assertSubjectPlot(subject);
             return getAdjacentPlots(subject.plot).some(plot => {
