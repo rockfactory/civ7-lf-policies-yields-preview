@@ -257,6 +257,14 @@ declare interface Player {
     Treasury: {
         /** Returns a **positive** amount (e.g. 20) */
         getMaintenanceForAllUnitsOfType: (unitType: number) => number;
+        /** Add (positive) or remove (negative) gold from the player. `reason` is an enum hash, pass -1 when unknown. */
+        changeGoldBalance: (amount: number, reason: number) => void;
+        goldBalance: number;
+    };
+    DiplomacyTreasury: {
+        /** Add (positive) or remove (negative) influence from the player. */
+        changeDiplomacyBalance: (amount: number) => void;
+        diplomacyBalance: number;
     };
     Trade: any;
     Techs: PlayerTechs;

@@ -154,6 +154,38 @@ function grantNode(nodeType) {
 }
 
 /**
+ * @param {number} amount
+ * @returns {boolean}
+ */
+function grantGold(amount) {
+    const player = getLocalPlayer();
+    if (!player?.Treasury) return false;
+    try {
+        player.Treasury.changeGoldBalance(amount, -1);
+        return true;
+    } catch (e) {
+        console.error('[LFDebug] changeGoldBalance failed', e);
+        return false;
+    }
+}
+
+/**
+ * @param {number} amount
+ * @returns {boolean}
+ */
+function grantInfluence(amount) {
+    const player = getLocalPlayer();
+    if (!player?.DiplomacyTreasury) return false;
+    try {
+        player.DiplomacyTreasury.changeDiplomacyBalance(amount);
+        return true;
+    } catch (e) {
+        console.error('[LFDebug] changeDiplomacyBalance failed', e);
+        return false;
+    }
+}
+
+/**
  * Unlock every civic node from every culture tree of the current age,
  * including unique trees belonging to other civilizations.
  * @returns {{ granted: number; failed: number }}
@@ -209,12 +241,16 @@ function ensurePanel() {
         <button class="lf-debug-action" data-action="tech" type="button"></button>
         <button class="lf-debug-action" data-action="civic" type="button"></button>
         <button class="lf-debug-action lf-debug-bulk" data-action="all-policies" type="button">Unlock All Policies (All Civs)</button>
+        <button class="lf-debug-action" data-action="gold" type="button">+500 Gold</button>
+        <button class="lf-debug-action" data-action="influence" type="button">+500 Influence</button>
     `;
     document.body.appendChild(panel);
 
     const techBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="tech"]'));
     const civicBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="civic"]'));
     const allBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="all-policies"]'));
+    const goldBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="gold"]'));
+    const influenceBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('[data-action="influence"]'));
     const toggleBtn = /** @type {HTMLButtonElement} */ (panel.querySelector('.lf-debug-toggle'));
 
     techBtn.addEventListener('click', () => {
@@ -236,6 +272,16 @@ function ensurePanel() {
         allBtn.textContent = `Granted ${result.granted} nodes`;
         setTimeout(() => { allBtn.textContent = 'Unlock All Policies (All Civs)'; }, 2000);
         setTimeout(updatePanel, 100);
+    });
+    goldBtn.addEventListener('click', () => {
+        if (grantGold(500)) {
+            console.log('[LFDebug] +500 gold');
+        }
+    });
+    influenceBtn.addEventListener('click', () => {
+        if (grantInfluence(500)) {
+            console.log('[LFDebug] +500 influence');
+        }
     });
     toggleBtn.addEventListener('click', () => {
         isCollapsed = !isCollapsed;
@@ -333,6 +379,8 @@ function init() {
         grantTech: () => grantNode(getCurrentTechNode()),
         grantCivic: () => grantNode(getCurrentCivicNode()),
         grantAllPolicies: () => grantAllPoliciesAllCivs(),
+        grantGold: (/** @type {number} */ amount = 500) => grantGold(amount),
+        grantInfluence: (/** @type {number} */ amount = 500) => grantInfluence(amount),
     };
 }
 
