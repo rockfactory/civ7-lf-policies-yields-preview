@@ -19,7 +19,11 @@ export function retrieveUnitTypesMaintenance(player) {
         }
 
         const count = player?.Units.getNumUnitsOfType(unit.type);
-        const maintenance = player?.Treasury.getMaintenanceForAllUnitsOfType(unit.type);
+        // Use the unit's *base* maintenance × count rather than
+        // player.Treasury.getMaintenanceForAllUnitsOfType, which reflects already-active
+        // modifiers: so when the policy being previewed is itself slotted, the live cost
+        // is already reduced and clamping against it would zero out the displayed savings.
+        const maintenance = (unitTypeInfo.Maintenance || 0) * count;
 
         unitTypes[unit.type] = {
             UnitType: unitTypeInfo,
