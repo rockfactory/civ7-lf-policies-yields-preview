@@ -3,7 +3,7 @@ import { addYieldsAmount, addYieldsPercentForCitySubject, addYieldTypeAmount, ad
 import { computeConstructibleMaintenanceEfficiencyReduction, findCityConstructibles, findCityConstructiblesMatchingAdjacency, getBaseConstructibleMaintenance, getBuildingsCountForModifier, getBuildingTypesForModifier, getPlayerBuildingsCountForModifier } from "../game/constructibles.js";
 import { getYieldsForAdjacency, getPlotsGrantingAdjacency, AdjancenciesCache } from "../game/adjacency.js";
 import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyCommanders } from "../game/units.js";
-import { getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
+import { countCityResourcesByClass, getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
 import { computeUnitMaintenanceYieldDelta, computeWorkerMaintenanceYieldDelta, parseArgumentsArray } from "../game/helpers.js";
 import { resolveSubjectsWithRequirements } from "../requirements/resolve-subjects.js";
 import { countPlayerResourcesByClass, countPlayerResourcesByType, countPlayerTradeRoutesToCityStates, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier, getPlayerUnlockedProgressionTreeNodes } from "../game/player.js";
@@ -676,10 +676,11 @@ function applyYieldsForSubject(context, subject, modifier) {
             return context.addYieldsAmountTimes(modifier, count);
         }
 
-        // Per-city variant of EFFECT_PLAYER_ADJUST_YIELD_PER_RESOURCE_CLASS: each city gets
-        // Amount * (player's resources of class). Observed argument shapes:
-        //   - ResourceClassType + YieldType + Amount (PROCEEDINGS, ATTACH_CS_SCIENTIFIC)
-        //   - + Unassigned=true (QUARTER_HAVEN treasure pool)  not implemented, throws below.
+        // Per-city yield scaled by Amount * (resources of class assigned to THIS city).
+        // Wording reference: LOC_TRADITION_PROCEEDINGS_DESCRIPTION — "Settlements receive +N
+        // Production for each Factory Resource assigned to them." Observed argument shapes:
+        //   - ResourceClassType + YieldType + Amount (PROCEEDINGS, ATTACH_CS_SCIENTIFIC_*_FACTORY_RESOURCES)
+        //   - + Unassigned=true (QUARTER_HAVEN treasure pool) — different semantics, not implemented, throws below.
         case "EFFECT_CITY_ADJUST_YIELD_PER_RESOURCE_CLASS": {
             assertSubjectCity(subject);
             if (modifier.Arguments.Unassigned?.Value?.toLowerCase?.() === 'true') {
@@ -687,7 +688,7 @@ function applyYieldsForSubject(context, subject, modifier) {
             }
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
             const resourceClassType = modifier.Arguments.getAsserted('ResourceClassType');
-            const count = countPlayerResourcesByClass(player, resourceClassType);
+            const count = countCityResourcesByClass(subject.city, resourceClassType);
             return context.addYieldsAmountTimes(modifier, count);
         }
 

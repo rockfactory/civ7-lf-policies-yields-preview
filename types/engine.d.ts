@@ -219,6 +219,8 @@ interface City {
     Resources: {
         getTotalCountAssignedResources: () => number;
         getAssignedResourcesCap(): number;
+        /** Returns entries for resources currently assigned to this city. `value` is the resource hash; lookup with `GameInfo.Resources.lookup(value)`. */
+        getAssignedResources: () => { value: number }[];
     };
     Constructibles: {
         getIds: () => ID[];

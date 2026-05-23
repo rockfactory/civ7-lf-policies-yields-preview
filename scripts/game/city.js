@@ -109,6 +109,21 @@ export function getCityAssignedResourcesCount(city) {
 }
 
 /**
+ * Count resources currently assigned to this city that belong to a given ResourceClassType.
+ * @param {City} city
+ * @param {string} resourceClassType
+ */
+export function countCityResourcesByClass(city, resourceClassType) {
+    const assigned = city.Resources?.getAssignedResources() || [];
+    let count = 0;
+    for (const entry of assigned) {
+        const def = GameInfo.Resources.lookup(entry.value);
+        if (def?.ResourceClassType === resourceClassType) count++;
+    }
+    return count;
+}
+
+/**
  * Get the number of great works in a city.
  * @param {City} city
  */
