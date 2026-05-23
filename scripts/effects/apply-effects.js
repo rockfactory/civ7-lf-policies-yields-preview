@@ -805,6 +805,18 @@ function applyYieldsForSubject(context, subject, modifier) {
             return context.addYieldsAmount(modifier, amount);
         }
 
+        // Per-plot counterpart of EFFECT_CITY_ADJUST_WORKER_YIELD: Amount × workers_on_plot.
+        // Single variant observed (Amount + YieldType): PANJI tradition, MEMENTO_PACHACUTI_MASCAPAYCHA.
+        case "EFFECT_PLOT_ADJUST_WORKER_YIELD": {
+            assertSubjectPlot(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            // assertSubjectPlot accepts Constructible/Unit too, which don't have `city`. Resolve the
+            // owning city from the plot index instead.
+            const city = Cities.getAtLocation(subject.plot);
+            const workers = city?.Workers.getNumWorkersAtPlot(subject.plot) || 0;
+            return context.addYieldsAmountTimes(modifier, workers);
+        }
+
         // ==============================
         // ========== Unit ==============
         // ==============================
