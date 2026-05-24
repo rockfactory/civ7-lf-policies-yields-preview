@@ -812,10 +812,15 @@ function applyYieldsForSubject(context, subject, modifier) {
                 return;
             }
 
-            // We don't know about specific filters for this modifier type when
-            // applied to a city. So we just apply it always.
+            // COLLECTION_PLAYER_CITIES / COLLECTION_ALL_CITIES iterate every settlement
+            // (cities AND towns); the modifier's ConstructibleType narrows that to the
+            // settlement(s) that actually own the matching building. Without this filter
+            // a Palace-bonus (e.g. MONTHON_*) is applied to every settlement instead of
+            // just the capital, scaling the yield by the settlement count.
             if (subject.type === 'City') {
-                return context.addYieldsAmountTimes(modifier, cityStates.length);
+                const buildingsCount = getBuildingsCountForModifier([subject.city], modifier);
+                if (buildingsCount === 0) return context.addYieldsAmount(modifier, 0);
+                return context.addYieldsAmountTimes(modifier, buildingsCount * cityStates.length);
             }
 
             throw new Error(`Unhandled subject type for EFFECT_CITY_ADJUST_SUZERAIN_OF_CONSTRUCTIBLE_YIELD: ${JSON.stringify(subject)}`);
