@@ -85,6 +85,7 @@
 					<Item>scripts/fetch-modifiers.js</Item>
 					<Item>scripts/modifiers.js</Item>
 					<Item>scripts/cache.js</Item>
+					<Item>scripts/api/public-api.js</Item>
 				</UIScripts>
 			</Actions>
 		</ActionGroup>
