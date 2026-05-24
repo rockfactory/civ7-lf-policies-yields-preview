@@ -28,6 +28,13 @@ declare var PlayerOperationTypes: {
     readonly [key: string]: number;
 };
 
+declare var CultureSlotTypes: {
+    readonly TRADITION_CULTURE_SLOT: number;
+    readonly POLICY_CULTURE_SLOT: number;
+    readonly CRISIS_CULTURE_SLOT: number;
+    readonly [key: string]: number;
+};
+
 declare interface PlayerOperationResult {
     Success: boolean;
     [key: string]: any;
@@ -290,7 +297,8 @@ interface PlayerCulture {
     getNumWorksInArchive: () => number;
     getArchivedGreatWork: (numInArchive: number) => number;
     getGreatWorkType: (index: number) => number;
-    getActiveTraditions: () => number[];
+    getActiveTraditions: (slotType: number) => number[];
+    isTraditionActive: (traditionHash: number) => boolean;
     getResearched(): ProgressionResearchedNode[];
     getResearching(): ProgressionResearchingNode | null;
     getTargetNode(): number;

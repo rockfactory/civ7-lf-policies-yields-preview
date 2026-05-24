@@ -7,6 +7,13 @@ export class PolicyYieldsContext extends PolicyExecutionContext {
     /** @type {YieldsDelta} */
     delta;
 
+    /** TraditionType (PK) of the item currently being previewed, when the
+     *  preview originates from `previewPolicyYields`. Null for other entry
+     *  points (attribute, city-state bonus). Read by tradition-counting
+     *  handlers to self-include when the previewed item is a Tradition.
+     *  @type {string | null} */
+    previewedTraditionType = null;
+
     constructor() {
         super();
         this.delta = createEmptyYieldsDelta();

@@ -159,26 +159,80 @@ export function isPlayerAtPeaceWithMajors(player) {
 }
 
 /**
+ * Count active Government-slotted items selected by the modifier's filter.
+ *
+ * Naming note: `GameInfo.Traditions` (and the engine API `getActiveTraditions`)
+ * cover BOTH actual Traditions (CultureSlotType=TRADITION_CULTURE_SLOT) AND
+ * Social Policies (CultureSlotType=POLICY_CULTURE_SLOT). The EFFECT name
+ * `_PER_ACTIVE_TRADITION` is generic — what's counted depends on the modifier's
+ * arguments:
+ *
+ *   - `CivUnique=true` (no Invert)  → keep items WITH a `TraitType` set
+ *                                     → in practice, civ-unique Traditions
+ *   - `CivUnique=true, Invert=true` → keep items WITHOUT a `TraitType`
+ *                                     → in practice, Social Policies
+ *   - `CivUnique=false`             → no filter, count all slotted items
+ *
+ * Examples:
+ *   ORDER_AND_PROGRESS_I (CivUnique=true)                       → Mexican Traditions
+ *   FRENCH_EMPIRE_SYNCRETISM_*_POLICY_HAPPINESS (Invert=true)   → Social Policies
+ *     (description: "+X Happiness for every Social Policy slotted")
+ *   MEMENTO_LAFAYETTE_LETTER_ADRIENNE_MODIFIER_2 (Invert=true)  → Social Policies
+ *   TRAIT_MOD_*_LOSE_SCIENCE_PER_NON_UNIQUE_TRADITION (Ming)    → Social Policies
+ *     (modifier ID says "non-unique tradition" but means Policies)
+ *
+ * Also: the engine's `getActiveTraditions(slotType)` requires a slot type
+ * argument (see Base/modules/base-standard/ui/policies/model-policies.js);
+ * without it, the call returns nothing and the count silently collapses to 0.
+ *
  * @param {Player} player
  * @param {ResolvedModifier} modifier
+ * @param {string | null} [previewedTraditionType] PK of the item being previewed.
+ *     When it's a Tradition and not yet slotted, it's counted as +1 so the
+ *     tooltip shows the "if you slot this" value.
  */
-export function getPlayerActiveTraditionsForModifier(player, modifier) {
-    const activeTraditions = player.Culture.getActiveTraditions();
-    
-    // If you get weird values with `lf-policies-yields-debug`, it's normal:
-    // All traditions are unlocked at the start of the game, but they don't count toward `civ` traditions
-    // since we **reset to null the `TraitType**`.
-    // console.warn("ActiveTraditions", JSON.stringify(activeTraditions.map(at => GameInfo.Traditions.lookup(at)?.Name)));
+export function getPlayerActiveTraditionsForModifier(player, modifier, previewedTraditionType = null) {
+    const requireCivUnique = modifier.Arguments.CivUnique?.Value === 'true';
+    const invertFilter = modifier.Arguments.Invert?.Value === 'true';
 
-    // TODO this is bugged for Regis, since the tradition itself is a CivUnique
+    // Pool both slot types: Traditions live in TRADITION_CULTURE_SLOT, Policies
+    // in POLICY_CULTURE_SLOT, and let the filter pick which contribute.
+    const allItems = [
+        ...player.Culture.getActiveTraditions(CultureSlotTypes.TRADITION_CULTURE_SLOT),
+        ...player.Culture.getActiveTraditions(CultureSlotTypes.POLICY_CULTURE_SLOT),
+    ];
+
+    /** @param {Tradition | null | undefined} itemInfo */
+    const matchesFilter = (itemInfo) => {
+        if (!requireCivUnique) return true;
+        const hasTrait = !!itemInfo?.TraitType;
+        return invertFilter ? !hasTrait : hasTrait;
+    };
+
     let count = 0;
-    for (const tradition of activeTraditions) {
-        const traditionType = GameInfo.Traditions.lookup(tradition);
-        if (!traditionType?.TraitType && modifier.Arguments.CivUnique?.Value === 'true') {
-            continue;
-        }
-        count++; 
+    for (const item of allItems) {
+        const itemInfo = GameInfo.Traditions.lookup(item);
+        if (matchesFilter(itemInfo)) count++;
     }
+
+    if (previewedTraditionType) {
+        // GameInfoArray<T>.lookup only accepts a hash; use .find() for the PK string.
+        const previewedInfo = GameInfo.Traditions.find(t => t.TraditionType === previewedTraditionType);
+        // Self-include the previewed card iff this modifier would count it:
+        //   - it lives in a slot the modifier pools (TRADITION/POLICY, not Crisis), AND
+        //   - it satisfies the CivUnique/Invert filter, AND
+        //   - it isn't already slotted (would double-count).
+        // The filter check makes this slot-aware automatically: e.g. previewing a
+        // Tradition on a modifier with Invert=true won't self-add, because the
+        // modifier counts only Policies in that case.
+        const isInPool = previewedInfo?.CultureSlotType === 'TRADITION_CULTURE_SLOT'
+                      || previewedInfo?.CultureSlotType === 'POLICY_CULTURE_SLOT';
+        if (isInPool && previewedInfo) {
+            const alreadyActive = player.Culture.isTraditionActive(previewedInfo.$hash);
+            if (!alreadyActive && matchesFilter(previewedInfo)) count++;
+        }
+    }
+
     return count;
 }
 

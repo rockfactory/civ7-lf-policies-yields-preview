@@ -50,7 +50,7 @@ function applyYieldsForSubject(context, subject, modifier) {
         // ==============================
         case "EFFECT_PLAYER_ADJUST_YIELD_PER_ACTIVE_TRADITION": {
             assertSubjectPlayer(subject);
-            const count = subject.isEmpty ? 0 : getPlayerActiveTraditionsForModifier(subject.player, modifier);
+            const count = subject.isEmpty ? 0 : getPlayerActiveTraditionsForModifier(subject.player, modifier, context.previewedTraditionType);
             return context.addSubjectYieldsTimes(subject, modifier, count);
         }
 
@@ -748,7 +748,7 @@ function applyYieldsForSubject(context, subject, modifier) {
 
         case "EFFECT_CITY_ADJUST_YIELD_PER_ACTIVE_TRADITION": {
             assertSubjectCity(subject);
-            const count = subject.isEmpty ? 0 : getPlayerActiveTraditionsForModifier(player, modifier);
+            const count = subject.isEmpty ? 0 : getPlayerActiveTraditionsForModifier(player, modifier, context.previewedTraditionType);
             return context.addYieldsAmountTimes(modifier, count);
         }
 

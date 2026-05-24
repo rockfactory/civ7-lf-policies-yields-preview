@@ -7,7 +7,7 @@ import { getCityStateBonusModifier, getModifiersForAttribute, getModifiersForTra
 export function previewPolicyYields(policy) {
     // console.warn("previewPolicyYields for", policy.TraditionType);
     const modifiers = getModifiersForTradition(policy?.TraditionType);
-    return previewModifiersYields(modifiers, "Policy " + policy.TraditionType);
+    return previewModifiersYields(modifiers, "Policy " + policy.TraditionType, policy?.TraditionType ?? null);
 }
 
 /**
@@ -32,9 +32,11 @@ export function previewCityStateBonusYields(bonusType) {
  * Obtains the modifiers resolved yields.
  * @param {ResolvedModifier[] | null} modifiers
  * @param {string} description Used to provide debug information in case of errors.
+ * @param {string | null} [previewedTraditionType] TraditionType (PK) of the item being previewed;
+ *     null for non-policy entry points (attribute, city-state bonus).
  * @returns {YieldsPreviewResult}
  */
-export function previewModifiersYields(modifiers, description) {
+export function previewModifiersYields(modifiers, description, previewedTraditionType = null) {
     if (!modifiers) {
         return { yields: {}, modifiers: [], isValid: false };
     }
@@ -42,8 +44,9 @@ export function previewModifiersYields(modifiers, description) {
     try {
         // Context
         const yieldsContext = new PolicyYieldsContext();
+        yieldsContext.previewedTraditionType = previewedTraditionType;
         const player = Players.get(GameContext.localPlayerID);
-        
+
         modifiers.forEach(modifier => {
             const subjects = resolveSubjectsWithRequirements(player, modifier);
             applyYieldsForSubjects(yieldsContext, subjects, modifier);

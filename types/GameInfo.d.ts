@@ -26,6 +26,9 @@ declare interface Tradition extends BaseTableEntry {
   IsCrisis: boolean;
   Name: string;
   TraitType?: string | null;
+  /** Distinguishes Traditions (TRADITION_CULTURE_SLOT) from Policies
+   *  (POLICY_CULTURE_SLOT) and Crisis cards (CRISIS_CULTURE_SLOT). */
+  CultureSlotType: string;
 }
 
 /**
