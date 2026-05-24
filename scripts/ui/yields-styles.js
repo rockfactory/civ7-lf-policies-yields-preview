@@ -26,6 +26,19 @@ export function setupCSSStyles() {
         white-space: nowrap;
     }
 
+    /* Small gap between the +N text and the yield icon (Locale.stylize emits no
+       separator). Targets only fxs-font-icon inside our items so we don't touch
+       icons elsewhere. */
+    .yields-preview__root div.yields-preview__item fxs-font-icon {
+        margin-left: 0.15rem;
+    }
+
+    /* Nudge the icon up a hair to sit visually centered with the +N text.
+       transform survives the basegame's inline top: -0.1em without fighting it. */
+    .yields-preview__root div.yields-preview__item fxs-font-icon img {
+        transform: translateY(-0.08em);
+    }
+
     /** Colorful version: symmetric horizontal padding so the +X / icon block has the same
         breathing room on both sides (was asymmetric 0.35 left / 0.15 right originally). */
     .yields-preview__root.color div.yields-preview__item {
