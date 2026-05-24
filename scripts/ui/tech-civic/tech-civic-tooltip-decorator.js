@@ -184,6 +184,8 @@ function injectYieldsPreview(tooltipEl) {
         // --- Per-unlock box: traditions and visible modifiers both get matched in DOM by name and
         //     get their own box appended on the right of the matching UnlockItem row,
         //     mirroring how vanilla constructible unlocks (e.g. "Felicità +3" on Altare) lay out.
+        //     Width-capping CSS in `yields-styles.js` keeps wide multi-yield previews from
+        //     squeezing the description column.
         const unlockItems = Array.from(tooltipEl.querySelectorAll('[class*="img-base-ticket-bg"]'));
         debug('unlock items in DOM:', unlockItems.length);
         const usedItems = new Set();
@@ -214,7 +216,7 @@ function injectYieldsPreview(tooltipEl) {
 
             const previewBox = renderYieldsPreviewBox(result);
             if (!previewBox) continue;
-            
+
             previewBox.setAttribute('data-lf-yields-box', '1');
             previewBox.classList.add('ml-auto', 'self-center');
             matchedItem.appendChild(previewBox);

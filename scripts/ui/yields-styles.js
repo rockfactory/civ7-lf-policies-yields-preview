@@ -11,41 +11,26 @@ export function setupCSSStyles() {
         border-radius: 0.38rem;
         flex-wrap: wrap;
         justify-content: center;
+        column-gap: 0.3rem;
     }
 
     .yields-preview__root.no-color div.yields-preview__container {
-        padding: 0.3rem;
+        padding: 0.3rem 0.4rem;
         background: linear-gradient(180deg, rgba(19, 20, 21, 0.45) 0%, rgba(27, 27, 30, 0.85) 100%);
     }
 
     .yields-preview__root div.yields-preview__item {
         margin: 0;
-        line-height: 1.3333333333rem;                    
+        line-height: 1.3333333333rem;
         border-radius: 0.35rem;
-        margin-left: 0.3rem;
+        white-space: nowrap;
     }
 
-    /** Colorful version */
+    /** Colorful version: symmetric horizontal padding so the +X / icon block has the same
+        breathing room on both sides (was asymmetric 0.35 left / 0.15 right originally). */
     .yields-preview__root.color div.yields-preview__item {
-        padding-top: 0.15rem;
-        padding-bottom: 0.15rem;
-        padding-right: 0.15rem;
-        padding-left: 0.35rem;  
+        padding: 0.15rem 0.3rem;
     }
-
-
-    .yields-preview__item:first-child {
-        /*border-top-left-radius: 0.65rem;
-        border-bottom-left-radius: 0.65rem;*/
-        padding-left: 0.123rem;
-        margin-left: 0 !important;
-    }
-
-    .yields-preview__item:last-child {
-        /*border-top-right-radius: 0.65rem;
-        border-bottom-right-radius: 0.65rem;*/
-    }   
-
 
     /* Tooltips (from 23.3333) */
     .tech-civic-tooltip.tooltip .tooltip__content {
@@ -53,6 +38,19 @@ export function setupCSSStyles() {
     }
     .tree-tooltip.tooltip .tooltip__content {
         width: 25.3333333333rem !important;
+    }
+
+    /* UnlockItem rows in any tooltip (icon | divider | description | preview share a flex-row):
+       cap the preview width at 50% so wide multi-yield previews wrap instead of squeezing the
+       description. max-width is a hard cap that acts on the flex basis, so we don't need
+       flex-shrink: 1 + min-width: 0 on the root -- and crucially we DON'T want them: those
+       would let the parent flex layout squeeze the box below its (item + padding) natural
+       width whenever the description is long, visually eating the container padding so the
+       "+X icon" block ends up flush against the pill edges. Without shrink/min-width, the
+       basis is just clamped to 50% for big previews and left at natural width for small ones,
+       and the fixed CSS padding around the items is always honored. */
+    .img-base-ticket-bg > .yields-preview__root {
+        max-width: 30%;
     }
 
     /* City State bonus */
