@@ -497,7 +497,7 @@ declare interface Game {
         floodPercentChance: number;
     };
     ProgressionTrees: {
-        getNode(player: Player, type: number): any;
+        getNode(playerId: number, type: number): any;
     }
     PlayerOperations: PlayerOperationsApi;
     Notifications: Record<string, unknown>;
