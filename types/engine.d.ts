@@ -226,7 +226,15 @@ interface City {
     Resources: {
         getTotalCountAssignedResources: () => number;
         getAssignedResourcesCap(): number;
-        /** Returns entries for resources currently assigned to this city. `value` is the resource hash; lookup with `GameInfo.Resources.lookup(value)`. */
+        /**
+         * Returns entries for resources currently assigned to this city.
+         *
+         * IMPORTANT: `value` is the resource's per-instance LOCATION id, NOT the ResourceType
+         * hash. `GameInfo.Resources.lookup(value)` returns undefined. To resolve the definition,
+         * map via the owning player: `player.Resources.getResources()` → match by `.value`, then
+         * `GameInfo.Resources.lookup(entry.uniqueResource.resource)` on the matched entry.
+         * See `countCityResourcesByClass` in scripts/game/city.js.
+         */
         getAssignedResources: () => { value: number }[];
     };
     Constructibles: {

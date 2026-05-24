@@ -109,16 +109,29 @@ export function getCityAssignedResourcesCount(city) {
 }
 
 /**
- * Count resources currently assigned to this city that belong to a given ResourceClassType.
+ * Count resources assigned to this city by ResourceClassType. `entry.value` from
+ * `getAssignedResources()` is a location id, not the ResourceType hash.
+ * Resolve via `player.Resources.getResources()` (see base-standard model-resource-allocation.js)
+ * 
  * @param {City} city
  * @param {string} resourceClassType
  */
 export function countCityResourcesByClass(city, resourceClassType) {
     const assigned = city.Resources?.getAssignedResources() || [];
+    if (assigned.length === 0) return 0;
+
+    const owner = Players.get(city.owner);
+    const ownerResources = owner?.Resources?.getResources() || [];
+    /** @type {Map<number, string | undefined>} */
+    const valueToClass = new Map();
+    for (const entry of ownerResources) {
+        const def = GameInfo.Resources.lookup(entry.uniqueResource?.resource);
+        if (def) valueToClass.set(entry.value, def.ResourceClassType);
+    }
+
     let count = 0;
     for (const entry of assigned) {
-        const def = GameInfo.Resources.lookup(entry.value);
-        if (def?.ResourceClassType === resourceClassType) count++;
+        if (valueToClass.get(entry.value) === resourceClassType) count++;
     }
     return count;
 }
