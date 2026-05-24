@@ -11,6 +11,18 @@ import { PolicyYieldsCache } from "../cache.js";
  * @returns {PreviewSubject[]}
  */
 export function resolveSubjectsWithRequirements(player, modifier, parentSubject = null) {
+    // For nested modifiers (EFFECT_ATTACH_MODIFIERS) the OwnerRequirements gate decides
+    // whether the attached modifier fires on this owner at all. HIMAL attaches both a
+    // "+4 culture in CAPITAL" and a "+2 culture OTHER" child to every player city; without
+    // this gate, every mountain plot is counted by both children (+6 each instead of +4 or
+    // +2). Owner-fail returns no subjects so the nested modifier contributes nothing for
+    // this parent.
+    if (parentSubject && parentSubject.isEmpty !== true && modifier.OwnerRequirementSet) {
+        if (!filterSubjectByRequirementSet(player, parentSubject, modifier.OwnerRequirementSet)) {
+            return [];
+        }
+    }
+
     const baseSubjects = resolveBaseSubjects(modifier, parentSubject);
 
     const filtered = baseSubjects.filter(subject => {
