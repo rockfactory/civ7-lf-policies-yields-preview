@@ -1,5 +1,5 @@
 import { hasUnitTag, isUnitTypeInfoTargetOfArguments } from "../game/units.js";
-import { getCityGreatWorksCount, getCitySpecialistsCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
+import { cityMatchesHappinessStage, getCityGreatWorksCount, getCitySpecialistsCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
 import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType, getAppealThresholdFromArgs } from "../game/plot.js";
 import { getMaxTradeRoutesPerOtherPlayer, getPlayerCityStatesSuzerain, getTradeRouteDomain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
 import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectTradeRoute, assertSubjectUnit } from "./assert-subject.js";
@@ -31,8 +31,32 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return subject.city.isTown;
         }
         case "REQUIREMENT_CITY_IS_ORIGINAL_OWNER": {
-            assertSubjectCity(subject); 
+            assertSubjectCity(subject);
             return subject.city.originalOwner === player.id;
+        }
+        case "REQUIREMENT_SETTLEMENT_HAPPINESS_STAGE_MATCHES": {
+            assertSubjectCity(subject);
+            // Happiness stage system added in 1.4.1. Each usage carries a target
+            // HappinessStage plus exactly one comparison flag. Observed in Base data so
+            // far: IsGreaterThanOrEquals and IsExact; the remaining comparison flags are
+            // handled too for completeness.
+            const args = requirement.Arguments;
+            const stageType = args.getAsserted('HappinessStage');
+
+            /** @type {[string, import("../game/city.js").HappinessStageOperator][]} */
+            const comparisonFlags = [
+                ['IsExact', '=='],
+                ['IsGreaterThanOrEquals', '>='],
+                ['IsGreaterThan', '>'],
+                ['IsLessThanOrEquals', '<='],
+                ['IsLessThan', '<'],
+            ];
+            const active = comparisonFlags.filter(([name]) => args[name]?.Value === 'true');
+            if (active.length !== 1) {
+                throw new Error(`${requirement.Requirement.RequirementType}: expected exactly one comparison flag, got ${JSON.stringify(args)}`);
+            }
+
+            return cityMatchesHappinessStage(subject.city, stageType, active[0][1]);
         }
         case "REQUIREMENT_CITY_HAS_BUILDING": {
             assertSubjectCity(subject); 

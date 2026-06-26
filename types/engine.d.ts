@@ -221,6 +221,7 @@ interface City {
     };
     Yields: {
         getNetYield: (yieldType: string) => number;
+        getYield: (yieldType: string) => number;
         getYieldsForType: (yieldType: string) => YieldEntry;
     };
     Resources: {

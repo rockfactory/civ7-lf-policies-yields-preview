@@ -158,10 +158,121 @@ export function getCityGreatWorksCount(city) {
 }
 
 /**
- * @param {City} city 
+ * @param {City} city
  */
 export function getCityYieldHappiness(city) {
     return city.Yields.getNetYield("YIELD_HAPPINESS");
+}
+
+/**
+ * Happiness stage thresholds, read once from GameInfo.HappinessStages.
+ * Mirrors base-standard ui/city-banners/city-banners.js: missing thresholds
+ * default to -Infinity (min) / +Infinity (max). At runtime only the active age's
+ * rows are loaded, so (like the base game) we do not filter by Age.
+ * @type {{ stage: string, min: number, max: number }[] | null}
+ */
+let happinessStagesCache = null;
+
+/**
+ * Build (once) and return the happiness stage thresholds, in table order.
+ * @returns {{ stage: string, min: number, max: number }[]}
+ */
+function getHappinessStages() {
+    if (happinessStagesCache) return happinessStagesCache;
+
+    const stages = [];
+    for (const row of GameInfo.HappinessStages) {
+        stages.push({
+            stage: row.HappinessStageType,
+            min: row.StageMinThreshold ?? -Infinity,
+            max: row.StageMaxThreshold ?? Infinity,
+        });
+    }
+    happinessStagesCache = stages;
+    return stages;
+}
+
+/**
+ * Stage rank by ascending happiness (ANGRY < UNHAPPY < HAPPY < JOYOUS < ECSTATIC),
+ * read once. Comparisons run on ranks rather than raw thresholds so the operators
+ * behave correctly on the boundary values shared between adjacent stages.
+ * @type {Map<string, number> | null}
+ */
+let happinessStageRanksCache = null;
+
+/**
+ * Build (once) and return a map of HAPPINESS_STAGE_* type to its rank, where a
+ * higher rank means happier (ordered by ascending lower threshold).
+ * @returns {Map<string, number>}
+ */
+function getHappinessStageRanks() {
+    if (happinessStageRanksCache) return happinessStageRanksCache;
+
+    const ranks = new Map();
+    [...getHappinessStages()]
+        .sort((a, b) => a.min - b.min)
+        .forEach((stage, index) => ranks.set(stage.stage, index));
+    happinessStageRanksCache = ranks;
+    return ranks;
+}
+
+/**
+ * Resolve the happiness stage type for a given happiness value, using the same
+ * first-match threshold logic as base-standard city-banners.js realizeHappiness().
+ * @param {number} happiness
+ * @returns {string | null} the HAPPINESS_STAGE_* type, or null if none matched
+ */
+function getHappinessStageForValue(happiness) {
+    for (const stage of getHappinessStages()) {
+        if (happiness >= stage.min && happiness <= stage.max) {
+            return stage.stage;
+        }
+    }
+    return null;
+}
+
+/**
+ * Comparison operator for a settlement happiness-stage requirement.
+ * @typedef {"==" | ">=" | ">" | "<=" | "<"} HappinessStageOperator
+ */
+
+/**
+ * Check whether a city's current happiness stage satisfies a settlement
+ * happiness-stage requirement (REQUIREMENT_SETTLEMENT_HAPPINESS_STAGE_MATCHES).
+ *
+ * Happiness is read with Yields.getYield (gross), matching how the base game
+ * city banner derives the stage shown to the player. The comparison is performed
+ * on stage rank (happier = higher), so e.g. operator ">" means a strictly happier
+ * stage than `stageType`.
+ *
+ * @param {City} city
+ * @param {string} stageType the target HAPPINESS_STAGE_* type
+ * @param {HappinessStageOperator} operator how to compare the city's stage to the target
+ * @returns {boolean}
+ */
+export function cityMatchesHappinessStage(city, stageType, operator) {
+    const happiness = city.Yields?.getYield("YIELD_HAPPINESS");
+    if (happiness == null) return false;
+
+    const ranks = getHappinessStageRanks();
+    const targetRank = ranks.get(stageType);
+    if (targetRank == null) {
+        throw new Error(`REQUIREMENT_SETTLEMENT_HAPPINESS_STAGE_MATCHES: unknown HappinessStage ${stageType}`);
+    }
+
+    const currentStage = getHappinessStageForValue(happiness);
+    const currentRank = currentStage != null ? ranks.get(currentStage) : null;
+    if (currentRank == null) return false;
+
+    switch (operator) {
+        case "==": return currentRank === targetRank;
+        case ">=": return currentRank >= targetRank;
+        case ">":  return currentRank > targetRank;
+        case "<=": return currentRank <= targetRank;
+        case "<":  return currentRank < targetRank;
+        default:
+            throw new Error(`cityMatchesHappinessStage: unknown operator ${operator}`);
+    }
 }
 
 /**
