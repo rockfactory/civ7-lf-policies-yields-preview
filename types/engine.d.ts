@@ -604,7 +604,7 @@ declare interface GameplayMap {
     getOwner: (x: number, y: number) => number;
     getOwnerName: (x: number, y: number) => string;
     getOwnerHostility: (x: number, y: number) => number;
-    getOwningCityFromXY: (x: number, y: number) => number;
+    getOwningCityFromXY: (x: number, y: number) => ID;
     getHemisphere: (x: number, y: number) => string;
     getPrimaryHemisphere: (x: number, y: number) => string;
     getPlotDistance: (x1: number, y1: number, x2: number, y2: number) => number;
