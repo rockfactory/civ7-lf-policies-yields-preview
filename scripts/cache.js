@@ -19,6 +19,10 @@ export const PolicyYieldsCache = new class {
     cleanup() {
         this._yields = {};
         this._typeTags = {};
+        // Keyed by per-game `city.id.id`, which can collide across saves, so this
+        // must be reset too. `_leaderTraits` / `_civilizationTraits` are keyed by
+        // stable type strings (static reference data) and intentionally kept.
+        this._cityTradeYields = new Map();
     }
 
     /** @returns {UnwrappedPlayerYields} */
@@ -199,3 +203,16 @@ export function unwrapCurrentPlayerYields() {
     }
     return unwrappedYields;
 }
+
+// Repopulate the cache on every game entry (new game or loaded save). 
+engine.on('LoadComplete', () => {
+    PolicyYieldsCache.cleanup();
+    // Avoids reading player stats before they are ready
+    setTimeout(() => {
+        try {
+            PolicyYieldsCache.update();
+        } catch (error) {
+            console.warn('LFYieldsPreview: cache warm after LoadComplete failed', error);
+        }
+    }, 50);
+});
