@@ -6,7 +6,8 @@
   "description": "Civilization VII Policy Yields Preview Mod",
   "scripts": {
     "typecheck": "tsc -p jsconfig.ci.json --noEmit",
-    "check:modinfo": "node ci/check-scripts-registered.mjs"
+    "check:modinfo": "node ci/check-scripts-registered.mjs",
+    "bump": "node ci/bump-version.mjs"
   },
   "devDependencies": {
     "typescript": "~5.6.0"

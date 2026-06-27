@@ -149,3 +149,20 @@ consumer mod's `jsconfig.json` / `tsconfig.json`:
 In both cases, `LfYieldsPreview` becomes a typed global. Access it at
 runtime as `globalThis.LfYieldsPreview` (or just `LfYieldsPreview`,
 which the ambient declaration covers).
+
+## Release
+
+Version bumps are automated by `ci/bump-version.mjs`. It updates the version in
+`package.json` and the `.modinfo` `<Version>`, refreshes `package-lock.json` via
+`npm install`, and commits the three files as `Version bump vX.Y.Z`.
+
+```bash
+npm run bump -- --patch          # 1.4.1 -> 1.4.2
+npm run bump -- --minor          # 1.4.1 -> 1.5.0
+npm run bump -- --major          # 1.4.1 -> 2.0.0
+npm run bump -- --target 1.5.0   # explicit version (v1.5.0 also accepted)
+npm run bump -- --minor --dry-run  # preview only, no writes or commit
+```
+
+The commit includes only `package.json`, `package-lock.json`, and the `.modinfo`,
+so any other working-tree changes stay out of it.
