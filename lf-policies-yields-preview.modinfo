@@ -58,6 +58,7 @@
 				<UIScripts>
 					<Item>scripts/core/settings.js</Item>
 					<Item>scripts/core/execution-context.js</Item>
+					<Item>scripts/core/global.js</Item>
 					<Item>scripts/ui/render-yields-preview.js</Item>
 					<Item>scripts/ui/yields-styles.js</Item>
 					<Item>scripts/ui/solid-helpers.js</Item>
