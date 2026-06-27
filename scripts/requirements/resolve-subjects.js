@@ -269,10 +269,26 @@ function resolveBaseSubjects(modifier, parentSubject = null) {
         }
 
         
-        // Nested (Unit)
-        case "COLLECTION_UNIT_OCCUPIED_CITY":
-            console.warn("COLLECTION_UNIT_OCCUPIED_CITY not implemented");
-            return [];
+        // Nested (Unit): the city the parent unit is stationed in/occupying.
+        // Parent is a Unit (e.g. UTSUROU attaches to each army commander). Emits the
+        // city owning the unit's plot. OwnerRequirements (REQUIREMENT_UNIT_IS_STATIONED_ON_DISTRICT)
+        // already gate the parent before this runs.
+        case "COLLECTION_UNIT_OCCUPIED_CITY": {
+            if (parentSubject?.type !== "Unit") {
+                throw new Error("COLLECTION_UNIT_OCCUPIED_CITY requires a parentSubject (Unit)");
+            }
+            if (parentSubject.isEmpty === true) {
+                return [ { isEmpty: true, type: "City" } ];
+            }
+            const loc = parentSubject.unit.location;
+            const cityComponentID = GameplayMap.getOwningCityFromXY(loc.x, loc.y);
+            const city = cityComponentID ? Cities.get(cityComponentID) : null;
+            // Unit not garrisoned on a settled plot: no occupied city, so no yield.
+            if (!city) {
+                return [ { isEmpty: true, type: "City" } ];
+            }
+            return wrapCitySubjects([city]);
+        }
 
         case "COLLECTION_CITIES_FOLLOWING_OWNER_RELIGION": // Technically easy to grab, but no interesting effects applied
         // Recognized, but we can't provide simple yields for these:

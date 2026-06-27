@@ -1,6 +1,6 @@
 import { hasUnitTag, isUnitTypeInfoTargetOfArguments } from "../game/units.js";
 import { cityMatchesHappinessStage, getCityGreatWorksCount, getCitySpecialistsCount, getCityWalledDistricts, hasCityBuilding, hasCityOpenResourcesSlots, hasCityResourcesAmountAssigned, hasCityTerrain } from "../game/city.js";
-import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType, getAppealThresholdFromArgs } from "../game/plot.js";
+import { hasPlotConstructibleByArguments, getPlotConstructiblesByLocation, hasPlotDistrictOfClass, isPlotQuarter, getAdjacentPlots, isPlotAdjacentToCoast, hasPlotDistrictOfType, getAppealThresholdFromArgs, getPlotDistrict } from "../game/plot.js";
 import { getMaxTradeRoutesPerOtherPlayer, getPlayerCityStatesSuzerain, getTradeRouteDomain, isPlayerAtPeaceWithMajors, isPlayerAtWarWithOpposingIdeology } from "../game/player.js";
 import { assertSubjectCity, assertSubjectPlayer, assertSubjectPlot, assertSubjectTradeRoute, assertSubjectUnit } from "./assert-subject.js";
 import { PolicyExecutionContext } from "../core/execution-context.js";
@@ -475,6 +475,29 @@ export function isRequirementSatisfied(player, subject, requirement) {
         case "REQUIREMENT_UNIT_IN_OWNER_TERRITORY": {
             assertSubjectUnit(subject);
             return GameplayMap.getOwner(subject.unit.location.x, subject.unit.location.y) == player.id;
+        }
+
+        case "REQUIREMENT_UNIT_IS_STATIONED_ON_DISTRICT": {
+            assertSubjectUnit(subject);
+            // Unit must be garrisoned on a district plot. Argument variants in Base + DLC:
+            //   - DistrictType (comma list, e.g. DISTRICT_URBAN, DISTRICT_CITY_CENTER)
+            //   - Owned (bool): district must be / must not be owned by the unit's player
+            //   - no args: any district
+            const { district } = getPlotDistrict(subject.plot);
+            if (!district) return false;
+
+            if (requirement.Arguments.DistrictType) {
+                if (!hasPlotDistrictOfType(subject.plot, requirement)) return false;
+            }
+
+            if (requirement.Arguments.Owned) {
+                const requiresOwned = requirement.Arguments.Owned.Value === 'true';
+                const plotOwner = GameplayMap.getOwner(subject.unit.location.x, subject.unit.location.y);
+                const isOwnedByUnitPlayer = plotOwner === subject.player.id;
+                if (requiresOwned !== isOwnedByUnitPlayer) return false;
+            }
+
+            return true;
         }
 
         case "REQUIREMENT_UNIT_ON_DISTRICT": {
