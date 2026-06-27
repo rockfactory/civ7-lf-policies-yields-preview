@@ -1,5 +1,4 @@
 import DiplomacyManager from "/base-standard/ui/diplomacy/diplomacy-manager.js";
-import { PolicyYieldsCache } from "../cache.js";
 
 /**
  * Return all the city states that are tributaries of the player
@@ -15,26 +14,23 @@ export function getPlayerCityStatesSuzerain(player) {
 }
 
 /**
- * Return the city states suzerained by the player whose civilization carries
- * the TRAIT_CITY_STATE_<csType> trait (e.g. EXPANSIONIST, MILITARISTIC, ...).
- * Falls back to the full suzerain count if no city-state matches the trait
- * lookup (defensive: avoids returning 0 if the trait naming changes).
+ * Count the city states suzerained by the player whose CityStateType matches
+ * `csType` (e.g. EXPANSIONIST, MILITARISTIC, ...). The type comes from the
+ * city-state's own CityStateType (GameInfo.CityStateTypes), read via
+ * `getCityStateCityStateType()` (the same API the base game uses, see
+ * base-standard panel-player-diplomacy.js), NOT from civilization traits.
  * @param {Player} player
- * @param {string} csType
+ * @param {string} csType the CityStateType to match (e.g. "EXPANSIONIST")
+ * @returns {number}
  */
 export function getPlayerCityStatesSuzerainOfType(player, csType) {
     const suzerains = getPlayerCityStatesSuzerain(player);
-    const requiredTrait = `TRAIT_CITY_STATE_${csType}`;
     let matched = 0;
-    let lookupSucceeded = false;
     for (const cs of suzerains) {
-        const civType = GameInfo.Civilizations.lookup(cs.civilizationType)?.CivilizationType;
-        if (!civType) continue;
-        const traits = PolicyYieldsCache.getCivilizationTraits(civType);
-        if (traits.size > 0) lookupSucceeded = true;
-        if (traits.has(requiredTrait)) matched++;
+        const cityStateType = GameInfo.CityStateTypes.lookup(cs.getCityStateCityStateType())?.CityStateType;
+        if (cityStateType === csType) matched++;
     }
-    return lookupSucceeded ? matched : suzerains.length;
+    return matched;
 }
 
 /**

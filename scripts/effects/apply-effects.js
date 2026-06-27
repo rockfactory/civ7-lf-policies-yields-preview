@@ -726,7 +726,7 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_CITY_ADJUST_YIELD_PER_SUZERAINED_CITY_STATE_TYPE": {
             assertSubjectCity(subject);
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
-            // TODO verify trait mapping (TRAIT_CITY_STATE_<TYPE>); falls back to full suzerain count if no match
+            // Counts only suzerained city-states of the given CityStateType (e.g. EXPANSIONIST).
             const csType = modifier.Arguments.getAsserted('CityStateType');
             const count = getPlayerCityStatesSuzerainOfType(player, csType);
             return context.addYieldsAmountTimes(modifier, count);

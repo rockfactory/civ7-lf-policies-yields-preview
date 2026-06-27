@@ -417,6 +417,8 @@ declare interface Player {
     isHuman: boolean;
     isAI: boolean;
     isIndependent: boolean;
+    /** For a city-state (minor) player: hash of its CityStateType (GameInfo.CityStateTypes). */
+    getCityStateCityStateType(): number;
     isBarbarian: boolean;
     wasEverAlive: boolean;
     level: number; // Hash

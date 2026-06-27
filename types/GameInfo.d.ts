@@ -701,6 +701,14 @@ declare interface DistrictFreeConstructible extends BaseTableEntry {
   Tier: number; // Campo obbligatorio, tipo INTEGER con valore predefinito 1
 }
 
+declare interface CityStateType extends BaseTableEntry {
+  CityStateType: string;
+  Name: string;
+  Weight: number;
+  YieldType?: string | null;
+  DisperseRewardAmount: number;
+}
+
 declare interface CityStateBonus extends BaseTableEntry {
   CityStateBonusType: string;
   CityStateType: string;
@@ -856,6 +864,7 @@ declare interface IGameInfo {
   ProgressionTrees: GameInfoArray<ProgressionTree>;
   Improvements: GameInfoArray<Improvement>;
   District_FreeConstructibles: GameInfoArray<DistrictFreeConstructible>;
+  CityStateTypes: GameInfoArray<CityStateType>;
   CityStateBonuses: GameInfoArray<CityStateBonus>;
   CityStateBonusModifiers: GameInfoArray<CityStateBonusModifier>;
   DiplomacyActionGroups: GameInfoArray<DiplomacyActionGroup>;
