@@ -462,6 +462,16 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return unitTypeInfo.Domain == requirement.Arguments.getAsserted('UnitDomain');
         }
 
+        case "REQUIREMENT_UNIT_FORMATION_CLASS_MATCHES": {
+            assertSubjectUnit(subject);
+            // Added in 1.4.1. Only observed argument is UnitFormationClass (e.g.
+            // FORMATION_CLASS_COMMAND/FORMATION_CLASS_CIVILIAN) on age-exploration tech
+            // unlocks reached via the tech/civic preview.
+            const unitTypeInfo = GameInfo.Units.lookup(subject.unit.type);
+            if (!unitTypeInfo) return false;
+            return unitTypeInfo.FormationClass == requirement.Arguments.getAsserted('UnitFormationClass');
+        }
+
         case "REQUIREMENT_UNIT_IN_OWNER_TERRITORY": {
             assertSubjectUnit(subject);
             return GameplayMap.getOwner(subject.unit.location.x, subject.unit.location.y) == player.id;
@@ -648,6 +658,7 @@ export function isRequirementSatisfied(player, subject, requirement) {
         case "REQUIREMENT_OPPONENT_IS_DISTRICT":
         case "REQUIREMENT_PLOT_IN_COMMAND_RADIUS": // IRON_CROSS
         case "REQUIREMENT_PLAYER_IS_ATTACKING":
+        case "REQUIREMENT_OPPONENT_IS_OTHER_IDEOLOGY": // JINGOISM combat strength vs opposing ideology
         case "REQUIREMENT_PLOT_ADJACENT_FRIENDLY_UNIT_TAG_MATCHES": // combat (GARDE_IMPERIALE, KSHATRIYA)
         // Gating for one-time triggered effects we already ignore (EFFECT_CITY_GRANT_YIELD on capture)
         case "REQUIREMENT_PLAYER_FIRST_TIME_SETTLEMENT_OCCUPATION":
