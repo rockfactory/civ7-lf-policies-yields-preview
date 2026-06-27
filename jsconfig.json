@@ -2,7 +2,7 @@
   "compilerOptions": {
     "checkJs": true,
     "allowJs": true,
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "target": "ES2015",
     "strictNullChecks": true,
     "noImplicitAny": false,

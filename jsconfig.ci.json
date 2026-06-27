@@ -1,0 +1,13 @@
+{
+  "extends": "./jsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "/*": ["./ci/stubs/base-game"]
+    }
+  },
+  "include": ["scripts/**/*.js", "types/**/*.d.ts", "ci/stubs/**/*.d.ts"]
+}
