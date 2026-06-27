@@ -1,4 +1,5 @@
 import { PolicyYieldsCache } from "../cache.js";
+import { getGlobalParamNumber } from "../core/global.js";
 import { isConstructibleFullTile, isConstructibleValidForQuarter } from "./helpers.js";
 import { parseArgumentsArray } from "./helpers.js";
 
@@ -169,7 +170,5 @@ export function getAppealThresholdFromArgs(args) {
     } else {
         throw new Error(`getAppealThresholdFromArgs: unhandled arguments: ${JSON.stringify(args)}`);
     }
-    const row = GameInfo.GlobalParameters.lookup(paramName);
-    if (!row) throw new Error(`getAppealThresholdFromArgs: missing GlobalParameter ${paramName}`);
-    return parseInt(row.Value);
+    return getGlobalParamNumber(paramName);
 }

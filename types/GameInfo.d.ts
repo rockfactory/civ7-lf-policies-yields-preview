@@ -462,6 +462,10 @@ declare interface Project extends BaseTableEntry {
 declare interface AdjacencyYieldChange extends BaseTableEntry {
   ID: string;
   AdjacentBiome?: string | null;
+  /** Neighbour plot must be at least Breathtaking appeal (>= APPEAL_FOR_DOUBLE_HAPPINESS_TILE_YIELD). */
+  AdjacentBreathtakingAppeal: boolean;
+  /** Neighbour plot must be at least Charming appeal (>= APPEAL_FOR_HAPPINESS_TILE_YIELD). */
+  AdjacentCharmingAppeal: boolean;
   AdjacentConstructible?: string | null;
   AdjacentConstructibleTag?: string | null;
   AdjacentDistrict?: string | null;

@@ -1,4 +1,5 @@
 import { PolicyYieldsCache } from "../cache.js";
+import { getGlobalParamNumber } from "../core/global.js";
 import { isConstructibleValidForCurrentAge } from "./helpers.js";
 import { getPlotConstructiblesByLocation, getPlotDistrict, isPlotQuarter } from "./plot.js";
 
@@ -193,6 +194,19 @@ export function isPlotGrantingAdjacency(adjacency, plot) {
         if (!GameplayMap.isWater(loc.x, loc.y)) return false;
     }
 
+    // Appeal-tier adjacencies (Heian JO_BO_SYSTEM / MONOGATARI). The plot's appeal
+    // must reach the tier threshold; tiers are cumulative (a Breathtaking tile also
+    // satisfies Charming), matching the appeal tile-yield system and the base-game
+    // appeal lens thresholds (general-appeal-layer.js).
+    if (adjacency.AdjacentBreathtakingAppeal) {
+        const threshold = getGlobalParamNumber("APPEAL_FOR_DOUBLE_HAPPINESS_TILE_YIELD");
+        if (GameplayMap.getAppeal(loc.x, loc.y) < threshold) return false;
+    }
+    if (adjacency.AdjacentCharmingAppeal) {
+        const threshold = getGlobalParamNumber("APPEAL_FOR_HAPPINESS_TILE_YIELD");
+        if (GameplayMap.getAppeal(loc.x, loc.y) < threshold) return false;
+    }
+
     if (adjacency.AdjacentUniqueQuarter) {
         throw new Error(`AdjacencyYieldChange.AdjacentUniqueQuarter not implemented (plot ${plot}, adjacency ${adjacency.ID})`);
     }
@@ -218,8 +232,12 @@ export function isPlotGrantingAdjacency(adjacency, plot) {
  */
 export function getYieldsForAdjacency(location, adjacency) {
     const adjacentGrantingPlots = getPlotsGrantingAdjacency(location, adjacency);
-    if (adjacentGrantingPlots.length < adjacency.TilesRequired) return 0;
+    const tilesRequired = adjacency.TilesRequired || 1;
+    if (adjacentGrantingPlots.length < tilesRequired) return 0;
+    // Every `TilesRequired` qualifying tiles grant `YieldChange`. E.g. Heian
+    // JoboSystemBreathtakingAdjacencyCulture (YieldChange=1, TilesRequired=2) is
+    // +1 culture per 2 breathtaking tiles, not +1 per tile.
     // TODO adjacency.ProjectMaxYield ?
-    return adjacentGrantingPlots.length * adjacency.YieldChange;
+    return Math.floor(adjacentGrantingPlots.length / tilesRequired) * adjacency.YieldChange;
 }
 
