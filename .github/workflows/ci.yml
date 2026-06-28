@@ -18,6 +18,9 @@ jobs:
 
       - name: Check scripts registered in modinfo
         run: npm run check:modinfo
-      
+
+      - name: Check debug flags are disabled
+        run: npm run check:debug-flags
+
       - name: TypeScript check
         run: npm run typecheck

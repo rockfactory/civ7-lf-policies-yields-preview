@@ -7,6 +7,7 @@
   "scripts": {
     "typecheck": "tsc -p jsconfig.ci.json --noEmit",
     "check:modinfo": "node ci/check-scripts-registered.mjs",
+    "check:debug-flags": "node ci/check-debug-flags.mjs",
     "bump": "node ci/bump-version.mjs"
   },
   "devDependencies": {
