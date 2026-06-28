@@ -15,7 +15,7 @@ import { PolicyYieldsCache } from "../cache.js";
 /** Flip to `true` while diagnosing missing age-scoped data (warehouse/adjacency rows defined in
  * `*-no-persist.xml` of an age not currently loaded). Off by default — these aren't bugs we can
  * fix and they generate hundreds of lines of noise in UI.log. */
-const LF_DEBUG_WARNINGS = true;
+const LF_DEBUG_WARNINGS = false;
 
 /**
  * @param {PolicyYieldsContext} yieldsContext 
