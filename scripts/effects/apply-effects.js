@@ -15,7 +15,7 @@ import { PolicyYieldsCache } from "../cache.js";
 /** Flip to `true` while diagnosing missing age-scoped data (warehouse/adjacency rows defined in
  * `*-no-persist.xml` of an age not currently loaded). Off by default — these aren't bugs we can
  * fix and they generate hundreds of lines of noise in UI.log. */
-const LF_DEBUG_WARNINGS = false;
+const LF_DEBUG_WARNINGS = true;
 
 /**
  * @param {PolicyYieldsContext} yieldsContext 
@@ -327,13 +327,13 @@ function applyYieldsForSubject(context, subject, modifier) {
                 validConstructibles.forEach(constructible => {
                     const plotIndex = GameplayMap.getIndexFromLocation(constructible.location);
                     const specialists = subject.city.Workers.getNumWorkersAtPlot(plotIndex) || 0;
-                    const amount = getYieldsForAdjacency(constructible.location, adjacencyType);                    
-                    
-                    // Debugging
-                    // if (amount > 0) {
-                    //     const constructibleType = GameInfo.Constructibles.lookup(constructible.type);
-                    //     console.warn("Valid constructible at", `(amount ${amount})`, constructibleType?.ConstructibleType, constructible.location.x, ",", constructible.location.y, "with specialists", specialists);
-                    // }
+                    const amount = getYieldsForAdjacency(constructible.location, adjacencyType);
+
+                    // Debugging: logs every matched constructible with its class
+                    if (LF_DEBUG_WARNINGS) {
+                        const constructibleType = GameInfo.Constructibles.lookup(constructible.type);
+                        console.warn(`[LFAdjacency] ${adjacencyId}: ${constructibleType?.ConstructibleType} (class=${constructibleType?.ConstructibleClass}) amount=${amount} specialists=${specialists} at ${constructible.location.x},${constructible.location.y}`);
+                    }
 
                     context.addYieldTypeAmount(adjacencyType.YieldType, amount + (amount / 2) * specialists);
                 });

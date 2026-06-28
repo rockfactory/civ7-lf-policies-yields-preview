@@ -36,8 +36,6 @@ export const ConstructibleAdjacencies = new class {
         const type = constructibleType.ConstructibleType;
 
         if (!this._adjacencies[type]) {
-            const currentAge = GameInfo.Ages.lookup(Game.age)?.AgeType;
-
             // If the constructible is not valid for the current age, all the adjacencies are
             // invalid. This is _not_ true for WildcardAdjacencies, which are always valid and
             // have a flag to check if they are only valid for the current age.
@@ -51,12 +49,33 @@ export const ConstructibleAdjacencies = new class {
 
             const wildcardAdjacencies = GameInfo.Constructible_WildcardAdjacencies
                 .filter(ca => {
-                    // I'm not sure why, but all wildcard adjacencies applies to buildings only.
-                    // E.g. tried with City of Peace. Improvements near the city center are not
-                    // affected by the adjacency.
-                    // if this is true, what's the point of having `ConstructibleClass` in the
-                    // Constructible_WildcardAdjacencies table?
-                    if (constructibleType.ConstructibleClass !== "BUILDING") {
+                    // Unsupported case: no shipped row sets BOTH ConstructibleClass and
+                    // ConstructibleTag, and the two-case rule below relies on them being mutually
+                    // exclusive. If a future row sets both, the combination semantics are unknown
+                    // (AND? OR?), so fail loudly instead of guessing and rendering wrong yields.
+                    if (ca.ConstructibleClass && ca.ConstructibleTag) {
+                        console.error(`[lf-policies-yields-preview] Wildcard adjacency '${ca.YieldChangeId}' sets BOTH ConstructibleClass='${ca.ConstructibleClass}' AND ConstructibleTag='${ca.ConstructibleTag}'. This combination is not handled: targeting semantics are ambiguous. Aborting the preview so we do not display incorrect yields.`);
+                        throw new Error(`Wildcard adjacency '${ca.YieldChangeId}' sets both ConstructibleClass ('${ca.ConstructibleClass}') and ConstructibleTag ('${ca.ConstructibleTag}'), which is not supported.`);
+                    }
+
+                    // Targeting pattern across ALL shipped wildcard rows (base + DLC): a row sets
+                    // EITHER ConstructibleTag OR ConstructibleClass, never both, and ConstructibleClass
+                    // is only ever "BUILDING". So which constructibles a wildcard reaches collapses to
+                    // two cases, confirmed by the description text:
+                    //   - tag-scoped row  -> any constructible carrying that tag, Wonders included
+                    //                        (MONOGATARI: GREATWORK is on Great Work buildings AND
+                    //                        Wonders -> "...Buildings and Wonders...").
+                    //   - untagged row    -> Buildings only, whether the row is bare or explicitly
+                    //                        ConstructibleClass="BUILDING" (City of Peace / JO_BO
+                    //                        descriptions literally say "All Buildings").
+                    // Plus two cross-cutting rules: Improvements never receive wildcard adjacencies
+                    // (verified in-game with City of Peace), and Walls are excluded.
+                    if (constructibleType.ConstructibleClass === "IMPROVEMENT") {
+                        return false;
+                    }
+
+                    // Heuristic: no tag = only BUILDING class, tag = any class HAVING that tag.
+                    if (!ca.ConstructibleTag && constructibleType.ConstructibleClass !== "BUILDING") {
                         return false;
                     }
 
@@ -71,7 +90,8 @@ export const ConstructibleAdjacencies = new class {
                     if (ca.ConstructibleTag && !tags.has(ca.ConstructibleTag)) {
                         return false;
                     }
-                    if (ca.CurrentAgeConstructiblesOnly && constructibleType.Age !== currentAge) {
+                    // This filter includes AGELESS buildings
+                    if (ca.CurrentAgeConstructiblesOnly && !isConstructibleValidForCurrentAge(constructibleType)) {
                         return false;
                     }
                     return true;
@@ -194,17 +214,22 @@ export function isPlotGrantingAdjacency(adjacency, plot) {
         if (!GameplayMap.isWater(loc.x, loc.y)) return false;
     }
 
-    // Appeal-tier adjacencies (Heian JO_BO_SYSTEM / MONOGATARI). The plot's appeal
-    // must reach the tier threshold; tiers are cumulative (a Breathtaking tile also
-    // satisfies Charming), matching the appeal tile-yield system and the base-game
-    // appeal lens thresholds (general-appeal-layer.js).
+    // Appeal-tier adjacencies (Heian JO_BO_SYSTEM / MONOGATARI). The base game classifies
+    // a plot's appeal into EXCLUSIVE tiers via an else-if chain (general-appeal-layer.js):
+    // Breathtaking if appeal >= APPEAL_FOR_DOUBLE_HAPPINESS_TILE_YIELD, otherwise Charming
+    // if appeal >= APPEAL_FOR_HAPPINESS_TILE_YIELD, otherwise Average. A Breathtaking tile
+    // is NOT also Charming, so the Charming check must reject the Breathtaking band too.
+    // In-game proof: a Temple touching 3 Charming + 3 Breathtaking tiles gets +3 Happiness
+    // (Charming) and +6 Food (Breathtaking); Breathtaking tiles grant no Happiness.
     if (adjacency.AdjacentBreathtakingAppeal) {
-        const threshold = getGlobalParamNumber("APPEAL_FOR_DOUBLE_HAPPINESS_TILE_YIELD");
-        if (GameplayMap.getAppeal(loc.x, loc.y) < threshold) return false;
+        const breathtaking = getGlobalParamNumber("APPEAL_FOR_DOUBLE_HAPPINESS_TILE_YIELD");
+        if (GameplayMap.getAppeal(loc.x, loc.y) < breathtaking) return false;
     }
     if (adjacency.AdjacentCharmingAppeal) {
-        const threshold = getGlobalParamNumber("APPEAL_FOR_HAPPINESS_TILE_YIELD");
-        if (GameplayMap.getAppeal(loc.x, loc.y) < threshold) return false;
+        const charming = getGlobalParamNumber("APPEAL_FOR_HAPPINESS_TILE_YIELD");
+        const breathtaking = getGlobalParamNumber("APPEAL_FOR_DOUBLE_HAPPINESS_TILE_YIELD");
+        const appeal = GameplayMap.getAppeal(loc.x, loc.y);
+        if (appeal < charming || appeal >= breathtaking) return false;
     }
 
     if (adjacency.AdjacentUniqueQuarter) {
@@ -237,7 +262,8 @@ export function getYieldsForAdjacency(location, adjacency) {
     // Every `TilesRequired` qualifying tiles grant `YieldChange`. E.g. Heian
     // JoboSystemBreathtakingAdjacencyCulture (YieldChange=1, TilesRequired=2) is
     // +1 culture per 2 breathtaking tiles, not +1 per tile.
-    // TODO adjacency.ProjectMaxYield ?
+    // Note: adjacency.ProjectMaxYield is a UI projection hint only; it does not change
+    // this numeric formula, so it is intentionally not consulted here.
     return Math.floor(adjacentGrantingPlots.length / tilesRequired) * adjacency.YieldChange;
 }
 
