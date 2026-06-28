@@ -34,6 +34,22 @@ export function getPlayerCityStatesSuzerainOfType(player, csType) {
 }
 
 /**
+ * Count the player's active alliances with other major civilizations. Used by
+ * EFFECT_CITY_ADJUST_CONSTRUCTIBLE_YIELD_PER_PLAYER_ALLIANCE
+ * (CITY_STATE_DIPLOMATIC_BONUS_EXPLORATION_1, Minor Embassy influence).
+ * @param {Player} player
+ * @returns {number}
+ */
+export function countPlayerAlliances(player) {
+    let count = 0;
+    for (const otherPlayer of Players.getAlive()) {
+        if (!otherPlayer.isMajor || otherPlayer.id === player.id) continue;
+        if (player.Diplomacy?.hasAllied(otherPlayer.id)) count++;
+    }
+    return count;
+}
+
+/**
  * Count distinct civilization types of cities the player has conquered.
  * Used by EFFECT_PLAYER_ADJUST_YIELD_PER_UNIQUE_CIV_CONQUERED_CITY.
  * @param {Player} player

@@ -6,7 +6,7 @@ import { retrieveUnitTypesMaintenance, isUnitTypeInfoTargetOfArguments, getArmyC
 import { countCityResourcesByClass, getCityAssignedResourcesCount, getCityGreatWorksCount, getCitySpecialistsCount, getCityYieldHappiness } from "../game/city.js";
 import { computeUnitMaintenanceYieldDelta, computeWorkerMaintenanceYieldDelta, parseArgumentsArray } from "../game/helpers.js";
 import { resolveSubjectsWithRequirements } from "../requirements/resolve-subjects.js";
-import { countPlayerResourcesByClass, countPlayerResourcesByType, countPlayerTradeRoutesToCityStates, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier, getPlayerUnlockedProgressionTreeNodes } from "../game/player.js";
+import { countPlayerAlliances, countPlayerResourcesByClass, countPlayerResourcesByType, countPlayerTradeRoutesToCityStates, countUniqueConqueredCivilizations, getPlayerActiveTraditionsForModifier, getPlayerCityStatesSuzerain, getPlayerCityStatesSuzerainOfType, getPlayerCompletedMasteries, getPlayerOngoingDiplomacyActions, getPlayerRelationshipsCountForModifier, getPlayerUnlockedProgressionTreeNodes } from "../game/player.js";
 import { findCityConstructiblesMatchingWarehouse, getYieldsForWarehouseChange } from "../game/warehouse.js";
 import { PolicyYieldsContext } from "../core/execution-context.js";
 import { assertSubjectCity, assertSubjectConstructible, assertSubjectPlayer, assertSubjectPlot, assertSubjectUnit } from "../requirements/assert-subject.js";
@@ -139,6 +139,19 @@ function applyYieldsForSubject(context, subject, modifier) {
             assertSubjectPlayer(subject);
             const numTradeRoutes = subject.isEmpty ? 0 : subject.player.Trade.countPlayerTradeRoutes();
             return context.addYieldsAmountTimes(modifier, numTradeRoutes);
+        }
+
+        // "+N YieldType on active Trade Routes for each <CityStateType> City-State you are Suzerain of."
+        // (Freeholders, CITY_STATE_BONUS_*_14). Scales by BOTH the player's active trade route count
+        // AND the number of suzerained city-states of the given type, so the multiplier is their product.
+        // Observed only with YieldType + Amount + CityStateType=ECONOMIC.
+        case "EFFECT_PLAYER_ADJUST_YIELD_PER_NUM_TRADE_ROUTES_AND_SUZERAINED_TYPE": {
+            assertSubjectPlayer(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const numTradeRoutes = subject.player.Trade.countPlayerTradeRoutes();
+            const csType = modifier.Arguments.getAsserted('CityStateType');
+            const numSuzerained = getPlayerCityStatesSuzerainOfType(player, csType);
+            return context.addYieldsAmountTimes(modifier, numTradeRoutes * numSuzerained);
         }
 
         case "EFFECT_PLAYER_ADJUST_YIELD_PER_RESOURCE": {
@@ -732,6 +745,32 @@ function applyYieldsForSubject(context, subject, modifier) {
             return context.addYieldsAmountTimes(modifier, count);
         }
 
+        // A named constructible gets Amount YieldType per suzerained city-state of CityStateType.
+        // Temple (CITY_STATE_BONUS_EXPLORATION_8) / Museum (CITY_STATE_BONUS_MODERN_8):
+        // "+N Culture for each Cultural City-State you are Suzerain of". Mirrors the City branch of
+        // EFFECT_CITY_ADJUST_SUZERAIN_OF_CONSTRUCTIBLE_YIELD but with the CityStateType filter.
+        case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_YIELD_PER_SUZERAINED_CITY_STATE_TYPE": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const csType = modifier.Arguments.getAsserted('CityStateType');
+            const count = getPlayerCityStatesSuzerainOfType(player, csType);
+            if (count === 0) return context.addYieldsAmount(modifier, 0);
+            const buildingsCount = getBuildingsCountForModifier([subject.city], modifier);
+            return context.addYieldsAmountTimes(modifier, buildingsCount * count);
+        }
+
+        // A named constructible gets Amount YieldType per active alliance with a major civ.
+        // Minor Embassy (CITY_STATE_DIPLOMATIC_BONUS_EXPLORATION_1): "+1 Influence on Minor Embassies
+        // for each Alliance". Same shape as above, scaled by alliance count instead of suzerains.
+        case "EFFECT_CITY_ADJUST_CONSTRUCTIBLE_YIELD_PER_PLAYER_ALLIANCE": {
+            assertSubjectCity(subject);
+            if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
+            const alliances = countPlayerAlliances(player);
+            if (alliances === 0) return context.addYieldsAmount(modifier, 0);
+            const buildingsCount = getBuildingsCountForModifier([subject.city], modifier);
+            return context.addYieldsAmountTimes(modifier, buildingsCount * alliances);
+        }
+
         case "EFFECT_CITY_ADJUST_YIELD_PER_SURPLUS_HAPPINESS": {
             assertSubjectCity(subject);
             if (subject.isEmpty) return context.addYieldsAmount(modifier, 0);
@@ -957,6 +996,13 @@ function applyYieldsForSubject(context, subject, modifier) {
         case "EFFECT_ADJUST_PLAYER_VALID_IMPROVEMENT":
         case "EFFECT_CITY_ADD_RESOURCE_TO_PLOT":
         case "EFFECT_CITY_ADJUST_TRADE_ROUTE_RANGE_PER_SUZERAIN_OF":
+        case "EFFECT_PLAYER_GRANT_CONSTRUCTIBLE_UNLOCK":            // Hillfort (*_1): unlocks a constructible
+        case "EFFECT_ADJUST_PLAYER_VALID_UNIT_BUILD":              // Foederati/Corsair/Partisan (*_4): unit unlock
+        case "EFFECT_ADJUST_PLAYER_FREE_POLPULATION_CAPITAL_ON_CITY_STATE": // Expansionist (*_5): free population
+        case "EFFECT_CITY_GRANT_GREAT_WORK":                       // Artifact (*_8): one-time great work grant
+        case "EFFECT_DIPLOMACY_ADJUST_DIPLOMATIC_ACTION_TYPE_EFFICIENCY_PER_SUZERAINED_CITY_STATE_TYPE": // Diplomatic
+        case "EFFECT_DIPLOMACY_GRANT_DIPLOMATIC_ACTION":          // Diplomatic: grants a diplomatic action
+        case "EFFECT_PLAYER_DIPLOMACY_ACTION_GROUP_MOD":          // Diplomatic: action-group modifier
         // One-time / triggered yield grants — not previewable as steady-state
         case "EFFECT_PLAYER_GRANT_YIELD":
         case "EFFECT_CITY_GRANT_YIELD":

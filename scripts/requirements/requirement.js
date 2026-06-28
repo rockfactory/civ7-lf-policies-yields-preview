@@ -406,6 +406,18 @@ export function isRequirementSatisfied(player, subject, requirement) {
             return GameInfo.Resources.lookup(resource)?.ResourceType === requiredType;
         }
 
+        // Counterpart of REQUIREMENT_PLOT_RESOURCE_TYPE_MATCHES that matches on the resource's class.
+        // Single observed variant: ResourceClass=RESOURCECLASS_TREASURE (CITY_STATE_ECONOMIC_BONUS_EXPLORATION_6,
+        // "+Gold on Treasure resources"). Arg name is ResourceClass; the field is ResourceClassType.
+        case "REQUIREMENT_PLOT_RESOURCE_CLASS_TYPE_MATCHES": {
+            assertSubjectPlot(subject);
+            const requiredClass = requirement.Arguments.getAsserted('ResourceClass');
+            const loc = GameplayMap.getLocationFromIndex(subject.plot);
+            const resource = GameplayMap.getResourceType(loc.x, loc.y);
+            if (resource == ResourceTypes.NO_RESOURCE) return false;
+            return GameInfo.Resources.lookup(resource)?.ResourceClassType === requiredClass;
+        }
+
         // Constructible
         case "REQUIREMENT_CONSTRUCTIBLE_TAG_MATCHES": {
             if (subject.type !== 'Constructible') return false;
@@ -692,6 +704,19 @@ export function isRequirementSatisfied(player, subject, requirement) {
         // Narrative-only (Gilgamesh DLC narrative-stories-gameeffects-modern.xml)
         case "REQUIREMENT_PLAYER_HAS_X_ALLIANCES": {
             return false;
+        }
+
+        // True if the player has researched a specific tech/civic node to at least MinDepth (1=normal,
+        // 2=mastery). In city-state bonuses this only gates unit-build unlocks (Corsair/Partisan, *_4,
+        // via EFFECT_ADJUST_PLAYER_VALID_UNIT_BUILD), often with inverse="true" handled by the caller.
+        // The node may live in either system, so search both researched trees.
+        case "REQUIREMENT_PLAYER_HAS_COMPLETED_PROGRESSION_TREE_NODE": {
+            const nodeType = requirement.Arguments.getAsserted('ProgressionTreeNodeType');
+            const minDepth = Number(requirement.Arguments.MinDepth?.Value ?? 1);
+            const nodeInfo = GameInfo.ProgressionTreeNodes.find(n => n.ProgressionTreeNodeType === nodeType);
+            if (!nodeInfo) return false;
+            const researched = [...player.Techs.getResearched(), ...player.Culture.getResearched()];
+            return researched.some(n => n.type === nodeInfo.$hash && n.depth >= minDepth);
         }
 
         default:
